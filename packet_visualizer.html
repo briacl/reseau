@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Exploration des Couches Réseau</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; padding: 20px; text-align: center; color: #333; }
+        h1 { margin-bottom: 5px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        
+        /* Conteneurs */
+        .layer-box {
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 15px auto;
+            position: relative;
+            background-color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+        .layer-box:hover { box-shadow: 0 8px 15px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+        /* Titres des couches */
+        .layer-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.9em;
+        }
+
+        /* Styles spécifiques par couche */
+        /* Couche 1 : Physique */
+        .l1 { border-color: #343a40; background-color: #212529; color: #00ff00; font-family: 'Courier New', monospace; }
+        .l1 .layer-title { background-color: #000; color: #00ff00; border: 1px solid #00ff00; }
+        .bits-stream { word-break: break-all; opacity: 0.6; font-size: 0.8em; margin-bottom: 10px; }
+        
+        /* Couche 2 : Liaison (Ethernet) */
+        .l2 { border-color: #007bff; background-color: #e3f2fd; color: #333; }
+        .l2 .layer-title { background-color: #007bff; }
+
+        /* Couche 3 : Réseau (IP) */
+        .l3 { border-color: #28a745; background-color: #e8f5e9; }
+        .l3 .layer-title { background-color: #28a745; }
+
+        /* Couche 4/app : ICMP/Data */
+        .l4 { border-color: #fd7e14; background-color: #fff3e0; }
+        .l4 .layer-title { background-color: #fd7e14; }
+
+        .data-box { border: 2px dashed #6c757d; background-color: #f8f9fa; padding: 10px; margin-top: 10px; color: #555; }
+        
+        /* Champs d'en-tête (style "tableau") */
+        .header-row { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 15px; }
+        .field {
+            flex: 1;
+            min-width: 80px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.2);
+            padding: 8px 5px;
+            text-align: center;
+            font-size: 0.85em;
+            position: relative;
+        }
+        .field strong { display: block; font-size: 0.9em; margin-bottom: 2px; color: #000; }
+        .field span { color: #555; }
+        .field:hover { background-color: #fffde7; cursor: help; }
+
+        /* Petits détails visuels */
+        .preamble { background-color: #ccc; border-style: dashed; }
+        .fcs { background-color: #ccc; border-style: dashed; }
+        .arrow { text-align: center; color: #aaa; margin: 5px 0; font-size: 1.2em; }
+        
+        /* Info-bulle simple */
+        .field[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Explorateur de Paquets : L'Encapsulation</h1>
+    <p class="subtitle">Une vue en coupe du "Mille-feuille" réseau (Modèle OSI simplifié)</p>
+
+    <!-- COUCHE 1 -->
+    <div class="layer-box l1">
+        <div class="layer-title">COUCHE 1 : PHYSIQUE (Le Câble)</div>
+        <div style="margin-bottom: 10px; color: #bbb; font-size: 0.9em;">
+            C'est ici que circulent les signaux électriques ou optiques. Pour l'ordinateur, c'est une suite de bits (0 et 1).
+        </div>
+        <div class="bits-stream">
+            10101010 10101010 10101010 10101011 ... [Toute la trame ci-dessous est convertie en bits ici] ... 11001010
+        </div>
+
+        <!-- COUCHE 2 -->
+        <div class="layer-box l2">
+            <div class="layer-title">COUCHE 2 : LIAISON (Ethernet II)</div>
+            
+            <!-- En-tête Ethernet -->
+            <div class="header-row">
+                <div class="field preamble" title="7 octets de préambule pour la synchro + 1 octet SFD">
+                    <strong>Preamble + SFD</strong>
+                    <span>(Synchro)</span>
+                </div>
+                <div class="field" style="flex: 2;" title="Adresse MAC de Destination (6 octets)">
+                    <strong>MAC Dest</strong>
+                    <span>BB:BB:BB:BB:BB:BB</span>
+                </div>
+                <div class="field" style="flex: 2;" title="Adresse MAC Source (6 octets)">
+                    <strong>MAC Src</strong>
+                    <span>AA:AA:AA:AA:AA:AA</span>
+                </div>
+                <div class="field" title="Type de protocole encapsulé (0x0800 = IPv4)">
+                    <strong>Type</strong>
+                    <span>IPv4 (0x0800)</span>
+                </div>
+            </div>
+
+            <div class="arrow">▼ Payload (Données) ▼</div>
+
+            <!-- COUCHE 3 -->
+            <div class="layer-box l3">
+                <div class="layer-title">COUCHE 3 : RÉSEAU (IPv4)</div>
+                
+                <!-- En-tête IP -->
+                <div class="header-row">
+                    <div class="field" title="Version du protocole"><strong>Ver</strong><span>4</span></div>
+                    <div class="field" title="Longueur de l'en-tête"><strong>IHL</strong><span>5</span></div>
+                    <div class="field" title="Type of Service"><strong>TOS</strong><span>0</span></div>
+                    <div class="field" title="Longueur totale du paquet"><strong>Len</strong><span>84</span></div>
+                </div>
+                <div class="header-row">
+                    <div class="field" title="Identification pour réassemblage"><strong>ID</strong><span>12345</span></div>
+                    <div class="field" title="Flags (Drapeaux)"><strong>Flags</strong><span>0</span></div>
+                    <div class="field" title="Time To Live (Durée de vie)"><strong>TTL</strong><span>64</span></div>
+                    <div class="field" title="Protocole supérieur (1=ICMP)"><strong>Proto</strong><span>1 (ICMP)</span></div>
+                    <div class="field" title="Somme de contrôle de l'en-tête"><strong>Checksum</strong><span>0x....</span></div>
+                </div>
+                <div class="header-row">
+                    <div class="field" style="flex:2; background-color:#e8f5e9; border-color:#28a745;">
+                        <strong>IP Source</strong><br>192.168.1.10
+                    </div>
+                    <div class="field" style="flex:2; background-color:#e8f5e9; border-color:#28a745;">
+                        <strong>IP Destination</strong><br>192.168.1.20
+                    </div>
+                </div>
+
+                <div class="arrow">▼ Payload (Données) ▼</div>
+
+                <!-- COUCHE 4 / APP -->
+                <div class="layer-box l4">
+                    <div class="layer-title">COUCHE "APP" : ICMP (Message)</div>
+                    
+                    <div class="header-row">
+                        <div class="field" title="Type de message (8=Request)"><strong>Type</strong><span>8 (Echo Req)</span></div>
+                        <div class="field" title="Code du message"><strong>Code</strong><span>0</span></div>
+                        <div class="field" title="Vérification erreurs"><strong>Checksum</strong><span>0x1234</span></div>
+                        <div class="field" title="Identifiant"><strong>ID</strong><span>1</span></div>
+                        <div class="field" title="Numéro de séquence"><strong>Seq</strong><span>1</span></div>
+                    </div>
+
+                    <div class="data-box">
+                        <strong>DATA (Contenu)</strong><br>
+                        "Hello Bob!" <span style="color:#999; font-size:0.8em;">(32 octets de données...)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top:20px; text-align:right;">
+                <div class="field fcs" style="display:inline-block; width:150px;" title="Frame Check Sequence (CRC) pour vérifier l'intégrité de la trame">
+                    <strong>FCS (CRC)</strong><br><span>(4 octets à la fin)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
