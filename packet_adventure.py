@@ -396,8 +396,11 @@ def generate_web_visualization():
         <!-- LAYER 1 -->
         <div class="layer-badge-row"><span class="layer-badge badge-l1">Couche 1 : Physique</span></div>
         <div title="Couche Physique : Transmission des bits sur le support">
+            <div style="margin-bottom: 5px; color: #555; font-size: 0.9em; font-style: italic;">
+                C'est ici que circulent les signaux électriques ou optiques. Pour l'ordinateur, c'est une suite de bits (0 et 1).
+            </div>
             <div class="physical-layer">
-                Signal : 10101010 10101010 10101010 ... [ Préambule + SFD + Trame Ethernet ] ...
+                10101010 10101010 10101010 10101011 ... [Toute la trame ci-dessous est convertie en bits ici] ... 11001010
             </div>
         </div>
 
