@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetLab Quest v2 — Labo Réseau Interactif</title>
+<style>
+/* ===== RESET & VARIABLES ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --c2: #0069d9; --c3: #218838; --c4: #e0a800; --capp: #6f42c1;
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --border: #30363d;
+  --text: #c9d1d9; --text2: #8b949e;
+  --green: #3fb950; --red: #f85149; --orange: #d29922; --yellow: #e3b341; --purple: #bc8cff;
+}
+html, body { height: 100%; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  font-size: 14px; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ===== QUEST HEADER ===== */
+#quest-header {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: stretch; flex-shrink: 0; height: 50px; overflow-x: auto;
+}
+.quest-logo {
+  padding: 0 18px; font-weight: 700; font-size: 0.88em; white-space: nowrap;
+  border-right: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+  color: var(--text); flex-shrink: 0;
+}
+.chapter-tab {
+  display: flex; align-items: center; gap: 8px; padding: 0 18px;
+  cursor: pointer; border-right: 1px solid var(--border);
+  border-bottom: 3px solid transparent; font-size: 0.82em;
+  color: var(--text2); transition: all 0.15s; white-space: nowrap;
+  position: relative; flex-shrink: 0;
+}
+.chapter-tab:hover:not(.locked) { background: var(--bg3); color: var(--text); }
+.chapter-tab.active { color: var(--text); border-bottom-color: var(--c2); background: var(--bg3); }
+.chapter-tab.locked { opacity: 0.35; cursor: not-allowed; }
+.chapter-tab.done .tab-num { background: var(--green); color: #000; border-color: var(--green); }
+.tab-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75em; font-weight: 700; flex-shrink: 0; transition: all 0.3s;
+}
+.chapter-tab.active .tab-num { background: var(--c2); color: #fff; border-color: var(--c2); }
+
+/* ===== MAIN LAYOUT ===== */
+#main-layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ===== TOPOLOGY PANEL ===== */
+#topo-panel {
+  width: 250px; flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+#topo-title {
+  padding: 10px 14px; font-size: 0.65em; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--text2); border-bottom: 1px solid var(--border);
+  font-weight: 700; flex-shrink: 0;
+}
+#topo-canvas-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 12px; position: relative;
+}
+#topo-svg { width: 220px; height: 260px; }
+#topo-legend {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  font-size: 0.75em; flex-shrink: 0;
+}
+.tl-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; color: var(--text2); }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ===== CHAPTER CONTENT ===== */
+#chapter-content { flex: 1; overflow-y: auto; padding: 22px 26px; }
+.ch-panel { display: none; }
+.ch-panel.active { display: block; animation: fadein 0.25s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideLeft { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes glow { 0%,100% { box-shadow: 0 0 6px rgba(63,185,80,0.3); } 50% { box-shadow: 0 0 18px rgba(63,185,80,0.7); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ===== CHAPTER HEADER ===== */
+.ch-header { margin-bottom: 22px; }
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 12px; border-radius: 20px;
+  font-size: 0.68em; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; margin-bottom: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+}
+.b-config { border-color: var(--c3); color: var(--green); }
+.b-arp    { border-color: var(--c2); color: #88b8ff; }
+.b-trame  { border-color: var(--c4); color: var(--yellow); }
+.b-transport { border-color: var(--orange); color: var(--orange); }
+.b-proto  { border-color: var(--purple); color: var(--purple); }
+.ch-header h2 { font-size: 1.45em; margin-bottom: 6px; }
+.ch-header .ch-desc { color: var(--text2); font-style: italic; font-size: 0.9em; border-left: 3px solid var(--border); padding-left: 12px; }
+
+/* ===== PANEL ===== */
+.panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 16px; }
+.panel-title { font-size: 0.68em; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 14px; font-weight: 700; }
+
+/* ===== BUTTONS ===== */
+.btn {
+  padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 0.87em; font-weight: 600; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--c2); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #0056b3; }
+.btn-success { background: var(--green); color: #000; }
+.btn-success:hover:not(:disabled) { background: #2da844; }
+.btn-warn { background: var(--orange); color: #000; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { background: var(--border); }
+.btn-sm { padding: 4px 10px; font-size: 0.8em; }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* ===== FORMS ===== */
+input[type="text"], input[type="number"], select, textarea {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 7px 11px; border-radius: 6px; font-family: inherit; font-size: 0.9em;
+  outline: none; transition: border-color 0.15s;
+}
+input:focus, select:focus { border-color: var(--c2); }
+
+/* ===== IP CALCULATOR ===== */
+.ip-input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+#ip-input { font-family: monospace; font-size: 1.1em; width: 200px; letter-spacing: 0.5px; }
+#ip-input.invalid { border-color: var(--red); }
+#ip-input.valid { border-color: var(--green); }
+
+#ip-calc-result { display: none; }
+.ip-bits-display { margin-bottom: 14px; }
+.ip-bits-row {
+  display: flex; flex-wrap: nowrap; gap: 1px; font-family: monospace;
+  font-size: 0.68em; overflow-x: auto; padding-bottom: 2px;
+}
+.bit-cell {
+  min-width: 14px; height: 20px; display: flex; align-items: center; justify-content: center;
+  border-radius: 2px; font-weight: 700; flex-shrink: 0;
+}
+.bit-net  { background: rgba(0,105,217,0.4); border: 1px solid var(--c2); color: #88b8ff; }
+.bit-host { background: rgba(63,185,80,0.3); border: 1px solid var(--green); color: #9deca8; }
+.bit-sep  { background: transparent; color: var(--border); font-size: 0.9em; min-width: 8px; }
+.bits-label { font-size: 0.68em; color: var(--text2); margin-top: 4px; display: flex; gap: 12px; }
+.bl-net  { color: #88b8ff; }
+.bl-host { color: #9deca8; }
+
+.ip-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.ip-card {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px;
+}
+.ip-card-label { font-size: 0.65em; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text2); margin-bottom: 4px; }
+.ip-card-value { font-family: monospace; font-size: 0.95em; font-weight: 700; }
+.ip-card-sub { font-size: 0.72em; color: var(--text2); margin-top: 3px; }
+
+.ip-why {
+  background: rgba(0,105,217,0.08); border: 1px solid rgba(0,105,217,0.3);
+  border-radius: 6px; padding: 12px 14px; font-size: 0.82em; color: #88b8ff; line-height: 1.6;
+}
+.ip-why strong { color: #aaccff; }
+
+/* ===== FRAME BUILDER ===== */
+.fb-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.fb-step-track { display: flex; gap: 5px; align-items: center; margin-bottom: 14px; }
+.fb-step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+.fb-step-dot.done   { background: var(--green); }
+.fb-step-dot.active { background: var(--c2); transform: scale(1.4); }
+.fb-step-label { font-size: 0.78em; color: var(--text2); margin-left: 8px; }
+
+.frame-stack { margin-bottom: 16px; }
+.frame-layer {
+  border-radius: 6px; padding: 11px 14px; margin-bottom: 3px;
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  transition: filter 0.15s; animation: slideLeft 0.35s ease;
+}
+.frame-layer:hover { filter: brightness(1.15); }
+.fl-eth  { background: rgba(0,105,217,0.18); border: 1px solid var(--c2); }
+.fl-ip   { background: rgba(33,136,56,0.18);  border: 1px solid var(--c3); }
+.fl-udp  { background: rgba(224,168,0,0.18);  border: 1px solid var(--c4); }
+.fl-tcp  { background: rgba(224,168,0,0.18);  border: 1px solid var(--c4); }
+.fl-data { background: rgba(111,66,193,0.18); border: 1px solid var(--capp); }
+.fl-badge { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; min-width: 55px; }
+.fl-eth  .fl-badge { color: #88b8ff; }
+.fl-ip   .fl-badge { color: #9deca8; }
+.fl-udp  .fl-badge { color: #ffe082; }
+.fl-tcp  .fl-badge { color: #ffe082; }
+.fl-data .fl-badge { color: #d0b3ff; }
+.fl-size { font-family: monospace; font-size: 0.78em; color: var(--text2); min-width: 50px; }
+.fl-info { font-size: 0.8em; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-hint { margin-left: auto; font-size: 0.7em; color: var(--text2); flex-shrink: 0; }
+
+.layer-detail {
+  display: none; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px; margin-bottom: 8px; margin-top: -2px;
+  animation: fadein 0.2s ease;
+}
+.layer-detail.open { display: block; }
+.ld-fields { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ld-field {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 5px 8px; border-radius: 4px; font-size: 0.72em;
+}
+.ld-label { font-size: 0.8em; color: rgba(255,255,255,0.6); margin-bottom: 2px; text-transform: uppercase; }
+.ld-val   { font-family: monospace; font-weight: 700; }
+.ld-size  { font-size: 0.72em; color: rgba(255,255,255,0.45); margin-top: 1px; }
+.ldf-eth  { background: rgba(0,105,217,0.3); border: 1px solid var(--c2); color: #88b8ff; }
+.ldf-ip   { background: rgba(33,136,56,0.3);  border: 1px solid var(--c3); color: #9deca8; }
+.ldf-udp  { background: rgba(224,168,0,0.3);  border: 1px solid var(--c4); color: #ffe082; }
+.ldf-tcp  { background: rgba(224,168,0,0.3);  border: 1px solid var(--c4); color: #ffe082; }
+.ldf-data { background: rgba(111,66,193,0.3); border: 1px solid var(--capp); color: #d0b3ff; }
+.ld-why {
+  font-size: 0.81em; color: var(--text2); border-top: 1px solid var(--border);
+  padding-top: 10px; margin-top: 4px; line-height: 1.6;
+}
+.ld-why strong { color: var(--text); }
+.ld-why .math { color: var(--yellow); font-family: monospace; font-size: 0.95em; }
+
+/* ===== HEXDUMP ===== */
+.hexdump-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+.hex-legend { display: flex; gap: 14px; font-size: 0.72em; margin-bottom: 8px; flex-wrap: wrap; }
+.hexdump { font-family: 'Courier New', monospace; font-size: 0.78em; line-height: 1.9; letter-spacing: 0.4px; }
+.hex-eth  { color: #88b8ff; }
+.hex-ip   { color: #9deca8; }
+.hex-udp  { color: #ffe082; }
+.hex-tcp  { color: #ffe082; }
+.hex-data { color: #d0b3ff; }
+.bin-strip { display: flex; flex-wrap: wrap; gap: 2px; font-family: monospace; font-size: 0.68em; line-height: 1.4; }
+
+/* ===== ARP ===== */
+.diagram { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 14px; }
+.nodes-row { display: flex; align-items: center; justify-content: space-around; gap: 8px; }
+.node { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 72px; }
+.node-icon {
+  width: 52px; height: 38px; border-radius: 6px; background: var(--bg3);
+  border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+  font-size: 1.4em; transition: border-color 0.3s, box-shadow 0.3s;
+}
+.node-icon.glow { border-color: var(--green); box-shadow: 0 0 12px rgba(63,185,80,0.4); animation: glow 0.8s ease infinite; }
+.node-label { font-size: 0.72em; color: var(--text2); }
+.node-sublabel { font-size: 0.67em; color: var(--text2); font-family: monospace; }
+.arrow-track { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
+.arrow-line { width: 100%; height: 2px; background: var(--border); border-radius: 2px; position: relative; }
+.arrow-packet {
+  position: absolute; top: -7px; width: 16px; height: 16px; border-radius: 50%;
+  transition: left 1.2s cubic-bezier(.4,0,.2,1); opacity: 0;
+}
+.arrow-packet.visible { opacity: 1; }
+.arrow-label { font-size: 0.68em; color: var(--text2); text-align: center; }
+
+/* ===== TABLE ===== */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.84em; }
+.data-table th { text-align: left; padding: 7px 12px; background: var(--bg3); color: var(--text2); font-size: 0.78em; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); font-family: monospace; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg3); }
+.badge-new { background: var(--green); color: #000; border-radius: 3px; padding: 1px 6px; font-size: 0.73em; font-weight: 700; margin-left: 6px; animation: pulse 1s ease; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.73em; font-weight: 700; }
+.tag-ok   { background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid var(--green); }
+.tag-warn { background: rgba(210,153,34,0.2); color: var(--orange); border: 1px solid var(--orange); }
+.tag-err  { background: rgba(248,81,73,0.2); color: var(--red); border: 1px solid var(--red); }
+
+/* ===== LOG ===== */
+.log-zone {
+  font-family: 'Courier New', monospace; font-size: 0.8em; background: #000;
+  border: 1px solid var(--border); border-radius: 6px; padding: 11px;
+  max-height: 140px; overflow-y: auto; line-height: 1.65;
+}
+.log-line { animation: fadein 0.15s ease; }
+.log-send { color: #58a6ff; }
+.log-recv { color: var(--green); }
+.log-err  { color: var(--red); }
+.log-info { color: var(--text2); }
+.log-warn { color: var(--orange); }
+
+/* ===== TRANSPORT COMPARE ===== */
+.transport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.transport-col { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.tc-udp { border-top: 3px solid #58a6ff; }
+.tc-tcp { border-top: 3px solid var(--green); }
+.tc-title { font-weight: 700; font-size: 1em; margin-bottom: 3px; }
+.tc-tagline { font-size: 0.77em; color: var(--text2); font-style: italic; margin-bottom: 12px; }
+.tc-rows { font-size: 0.8em; }
+.tc-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+.tc-row:last-child { border-bottom: none; }
+.tc-key { color: var(--text2); flex-shrink: 0; }
+.tc-val { font-family: monospace; text-align: right; }
+
+.transport-sim { margin-top: 14px; }
+.sim-choice { display: flex; gap: 10px; margin-bottom: 14px; }
+
+/* ===== PROTOCOL CARDS ===== */
+.proto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.proto-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.proto-card:hover { border-color: var(--text2); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+.proto-card.selected { border-color: var(--c2); background: rgba(0,105,217,0.08); }
+.proto-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.p-http::before  { background: #58a6ff; }
+.p-https::before { background: var(--green); }
+.p-ssh::before   { background: var(--orange); }
+.p-ftp::before   { background: #f0883e; }
+.p-dns::before   { background: var(--purple); }
+.p-dhcp::before  { background: var(--c4); }
+.p-sip::before   { background: var(--red); }
+.p-icmp::before  { background: var(--text2); }
+.pc-name { font-weight: 700; font-size: 1em; margin-bottom: 4px; }
+.pc-port { font-family: monospace; font-size: 0.76em; color: var(--text2); margin-bottom: 8px; }
+.pc-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.pc-tag { padding: 2px 7px; border-radius: 10px; font-size: 0.68em; font-weight: 700; }
+.pt-tcp  { background: rgba(224,168,0,0.2); color: var(--yellow); border: 1px solid var(--c4); }
+.pt-udp  { background: rgba(0,105,217,0.2); color: #88b8ff; border: 1px solid var(--c2); }
+.pt-enc  { background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid var(--green); }
+.pt-plain{ background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid var(--red); }
+.pc-desc { font-size: 0.77em; color: var(--text2); line-height: 1.5; }
+
+.proto-detail-panel {
+  display: none; background: var(--bg2); border: 1px solid var(--c2);
+  border-radius: 8px; padding: 20px; animation: fadein 0.2s ease;
+}
+.proto-detail-panel.open { display: block; }
+.pd-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.pd-name { font-size: 1.2em; font-weight: 700; }
+.pd-close { cursor: pointer; color: var(--text2); font-size: 1.2em; padding: 4px 8px; border-radius: 4px; }
+.pd-close:hover { background: var(--bg3); color: var(--text); }
+
+/* ===== UNLOCK BANNER ===== */
+.unlock-banner {
+  background: rgba(63,185,80,0.1); border: 1px solid var(--green);
+  border-radius: 8px; padding: 14px 18px;
+  display: none; align-items: center; gap: 12px; margin-top: 18px;
+  animation: fadein 0.4s ease;
+}
+.unlock-banner.show { display: flex; }
+.ub-icon { font-size: 1.6em; }
+.ub-text { font-size: 0.87em; line-height: 1.5; }
+.ub-text strong { color: var(--green); }
+
+/* ===== MISC ===== */
+.row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.col { flex: 1; min-width: 0; }
+.spacer { height: 12px; }
+.mono { font-family: monospace; }
+.dim { color: var(--text2); }
+.pkt-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.pkt-field { display: flex; flex-direction: column; align-items: center; padding: 4px 8px; border-radius: 4px; font-size: 0.72em; }
+.pkt-field .f-label { font-size: 0.78em; color: rgba(255,255,255,0.65); margin-bottom: 2px; text-transform: uppercase; }
+.pkt-field .f-value { font-family: monospace; font-weight: 700; }
+.pf-eth { background: rgba(0,105,217,0.3); border: 1px solid var(--c2); color: #88b8ff; }
+.pf-ip  { background: rgba(33,136,56,0.3);  border: 1px solid var(--c3); color: #9deca8; }
+.pf-udp { background: rgba(224,168,0,0.3);  border: 1px solid var(--c4); color: #ffe082; }
+.pf-data{ background: rgba(111,66,193,0.3); border: 1px solid var(--capp); color: #d0b3ff; }
+
+/* ===== CONSOLE ===== */
+#console-bar {
+  background: #000; border-top: 1px solid var(--border);
+  height: 88px; overflow-y: auto; padding: 6px 16px; flex-shrink: 0;
+  font-family: 'Courier New', monospace; font-size: 0.77em; line-height: 1.7;
+}
+#console-bar .cl { animation: fadein 0.15s ease; }
+#console-bar .cl-info { color: var(--text2); }
+#console-bar .cl-ok   { color: var(--green); }
+#console-bar .cl-send { color: #58a6ff; }
+#console-bar .cl-warn { color: var(--orange); }
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ===== QUEST HEADER ===== -->
+<header id="quest-header">
+  <div class="quest-logo">🌐 NetLab Quest v2</div>
+  <div class="chapter-tab active" data-ch="0" id="tab-0">
+    <span class="tab-num">①</span> Config IP
+  </div>
+  <div class="chapter-tab locked" data-ch="1" id="tab-1">
+    <span class="tab-num">②</span> ARP
+  </div>
+  <div class="chapter-tab locked" data-ch="2" id="tab-2">
+    <span class="tab-num">③</span> Trame
+  </div>
+  <div class="chapter-tab locked" data-ch="3" id="tab-3">
+    <span class="tab-num">④</span> Transport
+  </div>
+  <div class="chapter-tab locked" data-ch="4" id="tab-4">
+    <span class="tab-num">⑤</span> Protocoles
+  </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<div id="main-layout">
+
+<!-- TOPOLOGY -->
+<aside id="topo-panel">
+  <div id="topo-title">📡 Topologie réseau</div>
+  <div id="topo-canvas-wrap">
+    <svg id="topo-svg" viewBox="0 0 220 260" xmlns="http://www.w3.org/2000/svg">
+      <!-- Cables -->
+      <line id="cable-pca-sw" x1="75" y1="72" x2="110" y2="130" stroke="#30363d" stroke-width="1.5"/>
+      <line id="cable-sw-pcb" x1="110" y1="130" x2="145" y2="72" stroke="#30363d" stroke-width="1.5"/>
+      <line id="cable-sw-router" x1="110" y1="148" x2="110" y2="210" stroke="#30363d" stroke-width="1.5"/>
+      <!-- PC-A -->
+      <rect id="svg-pca" x="35" y="30" width="80" height="56" rx="6"
+        fill="#21262d" stroke="#30363d" stroke-width="2"/>
+      <text x="75" y="55" text-anchor="middle" font-size="20" fill="#c9d1d9">💻</text>
+      <text x="75" y="70" text-anchor="middle" font-size="9" fill="#8b949e" font-family="sans-serif">PC-A</text>
+      <text id="svg-pca-ip" x="75" y="81" text-anchor="middle" font-size="8" fill="#3fb950" font-family="monospace">—</text>
+      <!-- PC-B -->
+      <rect id="svg-pcb" x="105" y="30" width="80" height="56" rx="6"
+        fill="#21262d" stroke="#30363d" stroke-width="2"/>
+      <text x="145" y="55" text-anchor="middle" font-size="20" fill="#c9d1d9">💻</text>
+      <text x="145" y="70" text-anchor="middle" font-size="9" fill="#8b949e" font-family="sans-serif">PC-B</text>
+      <text id="svg-pcb-ip" x="145" y="81" text-anchor="middle" font-size="8" fill="#8b949e" font-family="monospace">192.168.10.50</text>
+      <!-- Switch -->
+      <rect id="svg-sw" x="75" y="120" width="70" height="42" rx="6"
+        fill="#21262d" stroke="#30363d" stroke-width="2"/>
+      <text x="110" y="138" text-anchor="middle" font-size="16" fill="#c9d1d9">🔀</text>
+      <text x="110" y="154" text-anchor="middle" font-size="9" fill="#8b949e" font-family="sans-serif">Switch</text>
+      <!-- Router -->
+      <rect id="svg-router" x="70" y="205" width="80" height="46" rx="6"
+        fill="#21262d" stroke="#30363d" stroke-width="2"/>
+      <text x="110" y="225" text-anchor="middle" font-size="16" fill="#c9d1d9">🖧</text>
+      <text x="110" y="242" text-anchor="middle" font-size="9" fill="#8b949e" font-family="sans-serif">Routeur</text>
+      <!-- Animated packet dots -->
+      <circle id="topo-pkt-a" r="5" fill="#0069d9" opacity="0"/>
+      <circle id="topo-pkt-b" r="5" fill="#3fb950" opacity="0"/>
+    </svg>
+  </div>
+  <div id="topo-legend">
+    <div class="tl-row"><span class="tl-dot" style="background:var(--c2);"></span><span id="tl-pca">PC-A — non configuré</span></div>
+    <div class="tl-row"><span class="tl-dot" style="background:var(--text2);"></span><span>PC-B — 192.168.10.50</span></div>
+    <div class="tl-row"><span class="tl-dot" style="background:var(--c3);"></span><span>Switch + Routeur</span></div>
+  </div>
+</aside>
+
+<!-- CHAPTER CONTENT -->
+<main id="chapter-content">
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPITRE 0 — Config IP
+════════════════════════════════════════════════════════ -->
+<div class="ch-panel active" id="ch-0">
+  <div class="ch-header">
+    <div class="ch-badge b-config">① Couche 3 — Réseau</div>
+    <h2>Configure ta machine</h2>
+    <p class="ch-desc">"Avant d'envoyer quoi que ce soit, ton PC doit savoir qui il est — et où il est sur le réseau."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Assigne une adresse IP à PC-A</div>
+    <div class="ip-input-row">
+      <label class="dim" style="font-size:0.85em;">Adresse IP / masque CIDR :</label>
+      <input type="text" id="ip-input" placeholder="ex: 192.168.10.1/24" autocomplete="off" spellcheck="false">
+      <button class="btn btn-success" id="btn-ip-apply" disabled>✓ Appliquer</button>
+    </div>
+
+    <div id="ip-calc-result">
+      <div class="ip-bits-display">
+        <div class="panel-title" style="margin-bottom:8px;">Décomposition 32 bits</div>
+        <div class="ip-bits-row" id="ip-bits-row"></div>
+        <div class="bits-label">
+          <span class="bl-net">■ Bits réseau (figés)</span>
+          <span class="bl-host">■ Bits hôte (uniques par machine)</span>
+        </div>
+      </div>
+      <div class="ip-info-grid" id="ip-info-grid"></div>
+      <div class="ip-why" id="ip-why-box"></div>
+    </div>
+
+    <div class="unlock-banner" id="unlock-1">
+      <span class="ub-icon">🔓</span>
+      <div class="ub-text">
+        <strong>Chapitre 2 débloqué : ARP</strong><br>
+        PC-A connaît son IP — mais pas l'adresse MAC de PC-B. C'est le rôle d'ARP.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Pourquoi la notation CIDR ?</div>
+    <div style="font-size:0.85em; line-height:1.7; color:var(--text2);">
+      <p>Un masque de sous-réseau sépare l'adresse en deux parties : la <span style="color:#88b8ff;">partie réseau</span> (commune à toutes les machines du LAN) et la <span style="color:#9deca8;">partie hôte</span> (unique par machine).</p>
+      <br>
+      <p><strong style="color:var(--text);">/24</strong> signifie que les <strong>24 premiers bits</strong> sont réservés au réseau → masque <code>255.255.255.0</code> → <strong>256 − 2 = 254 machines</strong> possibles (on soustrait l'adresse réseau et le broadcast).</p>
+      <br>
+      <p><strong style="color:var(--text);">Règle clé :</strong> deux machines peuvent communiquer <em>directement</em> (sans routeur) seulement si elles partagent le même réseau — c'est-à-dire si leurs bits réseau sont identiques.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPITRE 1 — ARP
+════════════════════════════════════════════════════════ -->
+<div class="ch-panel" id="ch-1">
+  <div class="ch-header">
+    <div class="ch-badge b-arp">② Couche 2 — Liaison</div>
+    <h2>Découverte ARP</h2>
+    <p class="ch-desc">"Tu connais l'IP de PC-B. Mais pour construire une trame Ethernet, tu as besoin de sa MAC. ARP fait ce pont."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Pourquoi ARP est nécessaire</div>
+    <div style="font-size:0.84em; line-height:1.7; color:var(--text2); margin-bottom:14px;">
+      L'IP (<strong style="color:#9deca8;">couche 3</strong>) identifie une machine sur Internet.
+      La MAC (<strong style="color:#88b8ff;">couche 2</strong>) identifie une carte réseau sur un LAN.
+      Une trame Ethernet <em>ne contient pas d'IP dans son en-tête</em> — elle adresse des MACs.
+      Sans ARP, impossible de savoir à quelle case physique envoyer les bits.
+    </div>
+    <div class="diagram">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon" id="arp-pca-icon">💻</div>
+          <div class="node-label">PC-A</div>
+          <div class="node-sublabel" id="arp-pca-ip">—</div>
+          <div class="node-sublabel">AA:BB:CC:DD:EE:11</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="arp-pkt" style="background:var(--c2);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="arp-arrow-label">—</div>
+        </div>
+        <div class="node">
+          <div class="node-icon">🔀</div>
+          <div class="node-label">Switch</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="arp-pkt2" style="background:var(--c2);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="arp-arrow-label2">—</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="arp-pcb-icon">💻</div>
+          <div class="node-label">PC-B</div>
+          <div class="node-sublabel">192.168.10.50</div>
+          <div class="node-sublabel">AA:BB:CC:DD:EE:22</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+      <label class="dim" style="font-size:0.85em;">IP cible :</label>
+      <input type="text" id="arp-target-ip" value="192.168.10.50" style="width:150px;">
+      <button class="btn btn-primary" id="btn-arp-send">▶ Envoyer ARP Request</button>
+      <button class="btn btn-ghost btn-sm" id="btn-arp-reset">↺ Reset</button>
+    </div>
+    <div class="log-zone" id="arp-log"><span class="log-info">Prêt. Entrez une IP et lancez la requête ARP.</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Table ARP de PC-A</div>
+    <table class="data-table">
+      <thead><tr><th>Adresse IP</th><th>Adresse MAC</th><th>Interface</th><th>Statut</th></tr></thead>
+      <tbody id="arp-table-body">
+        <tr><td colspan="4" class="dim" style="text-align:center;padding:16px;">Table vide — aucun voisin résolu</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel" id="arp-frame-panel" style="display:none;">
+    <div class="panel-title">Trame ARP Request (ce qui circule réellement)</div>
+    <div class="pkt-row" id="arp-frame-fields"></div>
+    <div style="font-size:0.78em; color:var(--text2); margin-top:8px;">
+      La trame ARP ne contient <strong style="color:var(--text);">pas d'en-tête IP</strong> — elle est portée directement par Ethernet (EtherType 0x0806).
+    </div>
+  </div>
+
+  <div class="unlock-banner" id="unlock-2">
+    <span class="ub-icon">🔓</span>
+    <div class="ub-text">
+      <strong>Chapitre 3 débloqué : Construction de la trame</strong><br>
+      Tu sais maintenant l'adresse MAC de PC-B. Tu peux construire une vraie trame Ethernet.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPITRE 2 — Frame Builder
+════════════════════════════════════════════════════════ -->
+<div class="ch-panel" id="ch-2">
+  <div class="ch-header">
+    <div class="ch-badge b-trame">③ Toutes couches — Encapsulation</div>
+    <h2>Construis ta trame</h2>
+    <p class="ch-desc">"Chaque couche enveloppe le message comme une poupée russe — et chacune a une raison d'être."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Message à envoyer</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+      <input type="text" id="fb-msg" value="Hello, réseau !" style="flex:1; min-width:180px;">
+      <select id="fb-proto">
+        <option value="udp">UDP (sans connexion, rapide)</option>
+        <option value="tcp">TCP (fiable, avec connexion)</option>
+      </select>
+      <input type="text" id="fb-ip-dst" value="192.168.10.50" style="width:140px;" placeholder="IP destination">
+      <input type="number" id="fb-port" value="80" style="width:70px;" min="1" max="65535">
+    </div>
+    <div class="fb-step-track" id="fb-step-track">
+      <span style="font-size:0.75em; color:var(--text2); margin-right:4px;">Étape :</span>
+      <span class="fb-step-dot active" data-step="0"></span>
+      <span class="fb-step-dot" data-step="1"></span>
+      <span class="fb-step-dot" data-step="2"></span>
+      <span class="fb-step-dot" data-step="3"></span>
+      <span class="fb-step-label" id="fb-step-label">Données application</span>
+    </div>
+    <div class="fb-controls">
+      <button class="btn btn-ghost" id="btn-fb-data" disabled>① Données</button>
+      <button class="btn btn-warn" id="btn-fb-transport" disabled>② Transport</button>
+      <button class="btn btn-success" id="btn-fb-ip" disabled>③ IP</button>
+      <button class="btn btn-primary" id="btn-fb-eth" disabled>④ Ethernet</button>
+      <button class="btn btn-ghost btn-sm" id="btn-fb-reset">↺ Recommencer</button>
+    </div>
+    <div class="frame-stack" id="fb-stack">
+      <div style="color:var(--text2); font-size:0.84em; text-align:center; padding:20px 0;">
+        ↑ Clique sur <strong style="color:var(--text);">① Données</strong> pour commencer
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="fb-hexdump-panel" style="display:none;">
+    <div class="panel-title">Résultat — Hexdump Wireshark</div>
+    <div class="hexdump-wrap">
+      <div class="hex-legend">
+        <span><span style="color:#88b8ff;">■</span> Ethernet</span>
+        <span><span style="color:#9deca8;">■</span> IP</span>
+        <span><span style="color:#ffe082;">■</span> UDP/TCP</span>
+        <span><span style="color:#d0b3ff;">■</span> Données</span>
+      </div>
+      <div class="hexdump" id="fb-hexdump"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="fb-binary-panel" style="display:none;">
+    <div class="panel-title">Flux binaire (48 premiers octets)</div>
+    <div class="bin-strip" id="fb-binary"></div>
+    <div style="display:flex; gap:14px; font-size:0.7em; margin-top:6px; flex-wrap:wrap;" id="fb-bin-legend"></div>
+  </div>
+
+  <div class="unlock-banner" id="unlock-3">
+    <span class="ub-icon">🔓</span>
+    <div class="ub-text">
+      <strong>Chapitre 4 débloqué : Transport TCP vs UDP</strong><br>
+      Tu as construit une trame UDP. Mais pourquoi pas TCP ? Plongeons dans la couche transport.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPITRE 3 — Transport
+════════════════════════════════════════════════════════ -->
+<div class="ch-panel" id="ch-3">
+  <div class="ch-header">
+    <div class="ch-badge b-transport">④ Couche 4 — Transport</div>
+    <h2>TCP ou UDP ?</h2>
+    <p class="ch-desc">"Deux philosophies : la carte postale (UDP) ou l'appel téléphonique (TCP). Le bon choix dépend du contexte."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Comparaison tête à tête</div>
+    <div class="transport-grid">
+      <div class="transport-col tc-udp">
+        <div class="tc-title">UDP — User Datagram Protocol</div>
+        <div class="tc-tagline">« La carte postale — rapide, sans garantie »</div>
+        <div class="tc-rows">
+          <div class="tc-row"><span class="tc-key">Connexion préalable</span><span class="tc-val"><span class="tag tag-err">Non</span></span></div>
+          <div class="tc-row"><span class="tc-key">Garantie de livraison</span><span class="tc-val"><span class="tag tag-err">Non</span></span></div>
+          <div class="tc-row"><span class="tc-key">Ordre des paquets</span><span class="tc-val"><span class="tag tag-err">Non garanti</span></span></div>
+          <div class="tc-row"><span class="tc-key">Taille header</span><span class="tc-val" style="color:var(--green);">8 octets</span></div>
+          <div class="tc-row"><span class="tc-key">Overhead</span><span class="tc-val"><span class="tag tag-ok">Minimal</span></span></div>
+          <div class="tc-row"><span class="tc-key">Usage typique</span><span class="tc-val" style="font-size:0.88em;">DNS, streaming, jeux, VoIP</span></div>
+        </div>
+      </div>
+      <div class="transport-col tc-tcp">
+        <div class="tc-title">TCP — Transmission Control Protocol</div>
+        <div class="tc-tagline">« L'appel téléphonique — fiable, ordonné »</div>
+        <div class="tc-rows">
+          <div class="tc-row"><span class="tc-key">Connexion préalable</span><span class="tc-val"><span class="tag tag-ok">Oui (3-way)</span></span></div>
+          <div class="tc-row"><span class="tc-key">Garantie de livraison</span><span class="tc-val"><span class="tag tag-ok">Oui (ACK)</span></span></div>
+          <div class="tc-row"><span class="tc-key">Ordre des paquets</span><span class="tc-val"><span class="tag tag-ok">Garanti</span></span></div>
+          <div class="tc-row"><span class="tc-key">Taille header</span><span class="tc-val" style="color:var(--orange);">20 octets min</span></div>
+          <div class="tc-row"><span class="tc-key">Overhead</span><span class="tc-val"><span class="tag tag-warn">Significatif</span></span></div>
+          <div class="tc-row"><span class="tc-key">Usage typique</span><span class="tc-val" style="font-size:0.88em;">HTTP, SSH, FTP, SMTP</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Pourquoi UDP fait 8 octets et TCP 20 octets ?</div>
+    <div class="row">
+      <div class="col">
+        <div style="font-size:0.82em; color:var(--text2); margin-bottom:8px;"><strong style="color:#88b8ff;">UDP — 4 champs, 8 octets</strong></div>
+        <div class="pkt-row">
+          <div class="pkt-field pf-udp"><span class="f-label">Src Port</span><span class="f-value">2 oct</span></div>
+          <div class="pkt-field pf-udp"><span class="f-label">Dst Port</span><span class="f-value">2 oct</span></div>
+          <div class="pkt-field pf-udp"><span class="f-label">Longueur</span><span class="f-value">2 oct</span></div>
+          <div class="pkt-field pf-udp"><span class="f-label">Checksum</span><span class="f-value">2 oct</span></div>
+        </div>
+        <div style="font-size:0.78em; color:var(--text2); margin-top:8px;">
+          UDP est volontairement minimal. Juste assez pour multiplexer (ports) et contrôler les erreurs (checksum). Rien de plus.
+        </div>
+      </div>
+      <div class="col">
+        <div style="font-size:0.82em; color:var(--text2); margin-bottom:8px;"><strong style="color:#9deca8;">TCP — 10 champs, 20 octets min</strong></div>
+        <div class="pkt-row">
+          <div class="pkt-field pf-ip"><span class="f-label">Src Port</span><span class="f-value">2</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Dst Port</span><span class="f-value">2</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Seq Num</span><span class="f-value">4</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Ack Num</span><span class="f-value">4</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Offset+Flags</span><span class="f-value">4</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Window</span><span class="f-value">2</span></div>
+          <div class="pkt-field pf-ip"><span class="f-label">Checksum</span><span class="f-value">2</span></div>
+        </div>
+        <div style="font-size:0.78em; color:var(--text2); margin-top:8px;">
+          Les seq/ack num permettent de remettre les paquets dans l'ordre et de détecter les pertes. Cette fiabilité a un coût : +12 octets vs UDP.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Simulation : perte de paquet</div>
+    <div class="transport-grid" style="margin-bottom:14px;">
+      <div style="text-align:center;">
+        <div style="font-size:0.85em; color:#88b8ff; margin-bottom:8px;">UDP — paquet perdu</div>
+        <div class="diagram">
+          <div class="nodes-row">
+            <div class="node"><div class="node-icon" id="sim-udp-client">💻</div><div class="node-label">Client</div></div>
+            <div class="arrow-track">
+              <div class="arrow-line"><div class="arrow-packet" id="sim-udp-pkt" style="background:var(--c4);left:0;"></div></div>
+            </div>
+            <div class="node"><div class="node-icon" id="sim-udp-server">🖥️</div><div class="node-label">Serveur</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:0.85em; color:#9deca8; margin-bottom:8px;">TCP — retransmission automatique</div>
+        <div class="diagram">
+          <div class="nodes-row">
+            <div class="node"><div class="node-icon" id="sim-tcp-client">💻</div><div class="node-label">Client</div></div>
+            <div class="arrow-track">
+              <div class="arrow-line"><div class="arrow-packet" id="sim-tcp-pkt" style="background:var(--green);left:0;"></div></div>
+              <div class="arrow-label" id="sim-tcp-label" style="margin-top:6px;"></div>
+            </div>
+            <div class="node"><div class="node-icon" id="sim-tcp-server">🖥️</div><div class="node-label">Serveur</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+      <button class="btn btn-primary" id="btn-sim-udp-lose">☠ Simuler perte UDP</button>
+      <button class="btn btn-success" id="btn-sim-tcp-retransmit">↩ Simuler retransmission TCP</button>
+    </div>
+    <div class="log-zone" id="transport-log"><span class="log-info">Lance une simulation pour voir la différence.</span></div>
+  </div>
+
+  <div class="unlock-banner" id="unlock-4">
+    <span class="ub-icon">🔓</span>
+    <div class="ub-text">
+      <strong>Chapitre 5 débloqué : Les protocoles applicatifs</strong><br>
+      HTTP, HTTPS, SSH, FTP, SIP, DNS — pourquoi autant de protocoles ?
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHAPITRE 4 — Protocoles
+════════════════════════════════════════════════════════ -->
+<div class="ch-panel" id="ch-4">
+  <div class="ch-header">
+    <div class="ch-badge b-proto">⑤ Couche Application</div>
+    <h2>Les protocoles applicatifs</h2>
+    <p class="ch-desc">"Chaque protocole répond à un besoin spécifique : transport chiffré, transfert de fichiers, résolution de noms, appel vocal…"</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Clique sur un protocole pour l'explorer</div>
+    <div class="proto-grid" id="proto-grid"></div>
+    <div class="proto-detail-panel" id="proto-detail">
+      <div class="pd-header">
+        <span class="pd-name" id="pd-name"></span>
+        <span class="pd-close" id="pd-close">✕</span>
+      </div>
+      <div id="pd-content"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Encapsulations typiques — récapitulatif</div>
+    <table class="data-table">
+      <thead><tr><th>Trafic</th><th>Encapsulation</th><th>Ports</th></tr></thead>
+      <tbody>
+        <tr><td>Navigation web</td><td class="mono" style="color:#88b8ff;">ETH | IP | TCP | HTTP</td><td class="mono">80</td></tr>
+        <tr><td>Navigation sécurisée</td><td class="mono" style="color:#9deca8;">ETH | IP | TCP | TLS | HTTP</td><td class="mono">443</td></tr>
+        <tr><td>Administration SSH</td><td class="mono" style="color:#ffe082;">ETH | IP | TCP | SSH</td><td class="mono">22</td></tr>
+        <tr><td>Résolution DNS</td><td class="mono" style="color:#d0b3ff;">ETH | IP | UDP | DNS</td><td class="mono">53</td></tr>
+        <tr><td>Attribution DHCP</td><td class="mono" style="color:#d0b3ff;">ETH | IP | UDP | DHCP</td><td class="mono">67/68</td></tr>
+        <tr><td>Transfert fichier FTP</td><td class="mono" style="color:#ffe082;">ETH | IP | TCP | FTP</td><td class="mono">21/20</td></tr>
+        <tr><td>VoIP (SIP)</td><td class="mono" style="color:var(--red);">ETH | IP | UDP | SIP</td><td class="mono">5060</td></tr>
+        <tr><td>Ping</td><td class="mono" style="color:var(--text2);">ETH | IP | ICMP</td><td class="mono">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main><!-- /chapter-content -->
+</div><!-- /main-layout -->
+
+<!-- CONSOLE -->
+<footer id="console-bar">
+  <span class="cl cl-info">NetLab Quest v2 — prêt.</span>
+</footer>
+
+<script>
+// ============================================================
+// UTILS
+// ============================================================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function rHex(n) { return Array.from({length:n},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':'); }
+function b2h(n,bytes=1) { return n.toString(16).padStart(bytes*2,'0').toUpperCase(); }
+
+function logLine(id, cls, text) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  const d = document.createElement('div');
+  d.className = 'log-line ' + cls;
+  d.textContent = text;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
+function consoleLine(cls, text) {
+  const c = document.getElementById('console-bar');
+  const d = document.createElement('div');
+  d.className = 'cl ' + cls;
+  const t = new Date().toTimeString().slice(0,8);
+  d.textContent = `[${t}] ${text}`;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
+function animPkt(el, from, to, color, dur=1200) {
+  return new Promise(r => {
+    el.style.background = color;
+    el.style.left = from + '%';
+    el.style.transition = 'none';
+    el.classList.add('visible');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transition = `left ${dur}ms cubic-bezier(.4,0,.2,1)`;
+      el.style.left = to + '%';
+      setTimeout(() => { el.classList.remove('visible'); r(); }, dur + 80);
+    }));
+  });
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const S = {
+  pcA: { ip: null, prefix: null, mac: 'AA:BB:CC:DD:EE:11' },
+  pcB: { ip: '192.168.10.50', mac: 'AA:BB:CC:DD:EE:22' },
+  arpTable: {},
+  fbStep: -1,    // frame builder step
+  unlocked: [0], // unlocked chapters
+  currentChapter: 0
+};
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showChapter(n) {
+  if (!S.unlocked.includes(n)) return;
+  S.currentChapter = n;
+  document.querySelectorAll('.ch-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('ch-' + n).classList.add('active');
+  document.querySelectorAll('.chapter-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + n).classList.add('active');
+  consoleLine('cl-info', `Navigation → Chapitre ${n+1}`);
+}
+
+function unlock(n) {
+  if (S.unlocked.includes(n)) return;
+  S.unlocked.push(n);
+  const tab = document.getElementById('tab-' + n);
+  tab.classList.remove('locked');
+  // show unlock banner in previous chapter
+  const banner = document.getElementById('unlock-' + n);
+  if (banner) banner.classList.add('show');
+  consoleLine('cl-ok', `🔓 Chapitre ${n+1} débloqué !`);
+  setTimeout(() => showChapter(n), 1800);
+}
+
+// Bind chapter tabs
+document.querySelectorAll('.chapter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const n = parseInt(tab.dataset.ch);
+    showChapter(n);
+  });
+});
+
+// ============================================================
+// TOPOLOGY HELPERS
+// ============================================================
+function topoSetNodeActive(svgId, active) {
+  const el = document.getElementById(svgId);
+  if (!el) return;
+  el.setAttribute('stroke', active ? '#3fb950' : '#30363d');
+  el.setAttribute('stroke-width', active ? '2.5' : '2');
+}
+
+function topoUpdatePCA(ip) {
+  document.getElementById('svg-pca-ip').textContent = ip || '—';
+  document.getElementById('tl-pca').textContent = `PC-A — ${ip || 'non configuré'}`;
+}
+
+function topo_animArp() {
+  // Animate packet from PCA to PCB via switch in SVG
+  const pkt = document.getElementById('topo-pkt-a');
+  const pts = [
+    {x:75, y:72}, {x:110,y:130}, {x:145,y:72}
+  ];
+  let i = 0;
+  const step = () => {
+    if (i >= pts.length) { pkt.setAttribute('opacity','0'); return; }
+    pkt.setAttribute('cx', pts[i].x);
+    pkt.setAttribute('cy', pts[i].y);
+    pkt.setAttribute('opacity','1');
+    pkt.setAttribute('fill','#0069d9');
+    i++;
+    setTimeout(step, 600);
+  };
+  step();
+}
+
+function topo_animReply() {
+  const pkt = document.getElementById('topo-pkt-b');
+  const pts = [{x:145,y:72},{x:110,y:130},{x:75,y:72}];
+  let i = 0;
+  const step = () => {
+    if (i >= pts.length) { pkt.setAttribute('opacity','0'); return; }
+    pkt.setAttribute('cx', pts[i].x);
+    pkt.setAttribute('cy', pts[i].y);
+    pkt.setAttribute('opacity','1');
+    pkt.setAttribute('fill','#3fb950');
+    i++;
+    setTimeout(step, 600);
+  };
+  step();
+}
+
+// ============================================================
+// CHAPTER 0 — IP CALCULATOR
+// ============================================================
+function ipCalcParse(str) {
+  const m = str.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d+)$/);
+  if (!m) return null;
+  const ip = [+m[1],+m[2],+m[3],+m[4]];
+  const pref = +m[5];
+  if (pref < 0 || pref > 30) return null;
+  if (ip.some(b => b < 0 || b > 255)) return null;
+
+  // Mask bytes
+  const mask = [];
+  for (let i = 0; i < 4; i++) {
+    const bitsInOctet = Math.min(8, Math.max(0, pref - i * 8));
+    mask.push(bitsInOctet === 8 ? 255 : bitsInOctet === 0 ? 0 : ((0xFF << (8 - bitsInOctet)) & 0xFF));
+  }
+  const network   = ip.map((b,i) => b & mask[i]);
+  const broadcast = network.map((b,i) => b | (~mask[i] & 0xFF));
+  const firstHost = [...network]; firstHost[3]++;
+  const lastHost  = [...broadcast]; lastHost[3]--;
+  const hostBits  = 32 - pref;
+  const hostCount = hostBits >= 2 ? (1 << hostBits) - 2 : 0;
+
+  return { ip, pref, mask, network, broadcast, firstHost, lastHost, hostBits, hostCount };
+}
+
+function ipCalcRender(r) {
+  const resultEl = document.getElementById('ip-calc-result');
+  resultEl.style.display = 'block';
+
+  // Build 32-bit display
+  const bitsRow = document.getElementById('ip-bits-row');
+  bitsRow.innerHTML = '';
+  for (let oct = 0; oct < 4; oct++) {
+    if (oct > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'bit-cell bit-sep';
+      sep.textContent = '.';
+      bitsRow.appendChild(sep);
+    }
+    for (let bit = 7; bit >= 0; bit--) {
+      const absPos = oct * 8 + (7 - bit);
+      const val = (r.ip[oct] >> bit) & 1;
+      const el = document.createElement('span');
+      el.className = 'bit-cell ' + (absPos < r.pref ? 'bit-net' : 'bit-host');
+      el.textContent = val;
+      bitsRow.appendChild(el);
+    }
+  }
+
+  // Info cards
+  const grid = document.getElementById('ip-info-grid');
+  function card(label, value, sub='') {
+    return `<div class="ip-card">
+      <div class="ip-card-label">${label}</div>
+      <div class="ip-card-value">${value}</div>
+      ${sub ? `<div class="ip-card-sub">${sub}</div>` : ''}
+    </div>`;
+  }
+  grid.innerHTML =
+    card('Masque de sous-réseau', r.mask.join('.'),
+         r.mask.map(b=>b.toString(2).padStart(8,'0')).join('.')) +
+    card('Adresse réseau', r.network.join('.'),
+         'Adresse de base — non attribuable') +
+    card('Broadcast', r.broadcast.join('.'),
+         'Adresse de diffusion — non attribuable') +
+    card('Plage d\'hôtes', r.firstHost.join('.')+'<br>→ '+r.lastHost.join('.'),
+         r.hostCount + ' adresses utilisables') +
+    card('Nombre de machines', r.hostCount.toLocaleString('fr'),
+         `2<sup>${r.hostBits}</sup> − 2 = ${r.hostCount}`) +
+    card('Bits hôte', r.hostBits + ' bits',
+         `/${r.pref} → ${32-r.pref} bits pour les machines`);
+
+  // Why box
+  document.getElementById('ip-why-box').innerHTML =
+    `<strong>Pourquoi "/${r.pref}" ?</strong> Les ${r.pref} premiers bits identifient le réseau, les ${r.hostBits} derniers identifient la machine au sein de ce réseau.
+    Deux machines avec le même préfixe /${r.pref} communiquent <em>directement</em> ; pour joindre un autre réseau, elles passent par le <strong>routeur</strong>.
+    <br><br>⚠️ Adresses réservées : <strong>${r.network.join('.')}</strong> (réseau) et <strong>${r.broadcast.join('.')}</strong> (broadcast) — jamais assignées à une machine.`;
+}
+
+document.getElementById('ip-input').addEventListener('input', function() {
+  const r = ipCalcParse(this.value.trim());
+  this.className = this.value ? (r ? 'valid' : 'invalid') : '';
+  document.getElementById('ip-calc-result').style.display = r ? 'block' : 'none';
+  document.getElementById('btn-ip-apply').disabled = !r;
+  if (r) ipCalcRender(r);
+});
+
+document.getElementById('btn-ip-apply').addEventListener('click', function() {
+  const r = ipCalcParse(document.getElementById('ip-input').value.trim());
+  if (!r) return;
+  S.pcA.ip = r.ip.join('.');
+  S.pcA.prefix = r.pref;
+
+  // Update topology & ARP chapter
+  topoUpdatePCA(S.pcA.ip);
+  topoSetNodeActive('svg-pca', true);
+  document.getElementById('arp-pca-ip').textContent = S.pcA.ip;
+  document.getElementById('fb-ip-dst').value = r.network.slice(0,3).join('.')+'.50';
+  consoleLine('cl-ok', `PC-A configuré : ${S.pcA.ip}/${r.pref}`);
+
+  setTimeout(() => unlock(1), 500);
+});
+
+// ============================================================
+// CHAPTER 1 — ARP
+// ============================================================
+let arpBusy = false;
+const ARP_KNOWN = {'192.168.10.50':'AA:BB:CC:DD:EE:22','192.168.10.1':'AA:BB:CC:DD:EE:01'};
+
+async function arpSend() {
+  if (arpBusy) return;
+  arpBusy = true;
+  const targetIP = document.getElementById('arp-target-ip').value.trim() || '192.168.10.50';
+  const pkt  = document.getElementById('arp-pkt');
+  const pkt2 = document.getElementById('arp-pkt2');
+  const lbl  = document.getElementById('arp-arrow-label');
+  const lbl2 = document.getElementById('arp-arrow-label2');
+  document.getElementById('arp-log').innerHTML = '';
+
+  logLine('arp-log','log-send',`① BROADCAST → FF:FF:FF:FF:FF:FF`);
+  logLine('arp-log','log-info', `   ARP Request : "Qui a ${targetIP} ? Répondez à ${S.pcA.ip || '?'}"`);
+  lbl.textContent = 'ARP Request →'; lbl2.textContent = '→ broadcast';
+  topo_animArp();
+  await animPkt(pkt, 0, 90, 'var(--c2)');
+  await animPkt(pkt2, 0, 90, 'var(--c2)');
+  await sleep(300);
+
+  const mac = ARP_KNOWN[targetIP] || (targetIP.startsWith('192.168.') ? rHex(6) : null);
+  if (!mac) {
+    logLine('arp-log','log-err',`✗ Timeout — ${targetIP} ne répond pas (machine inconnue ou éteinte)`);
+    consoleLine('cl-warn', `ARP timeout pour ${targetIP}`);
+    arpBusy = false; return;
+  }
+
+  await sleep(200);
+  logLine('arp-log','log-recv',`② ARP Reply : "${targetIP} c'est moi — MA MAC : ${mac}"`);
+  lbl.textContent = '← ARP Reply'; lbl2.textContent = '←';
+  topo_animReply();
+  await animPkt(pkt2, 90, 0, 'var(--green)');
+  await animPkt(pkt, 90, 0, 'var(--green)');
+
+  S.arpTable[targetIP] = mac;
+  renderArpTable();
+  logLine('arp-log','log-info',`✓ Table ARP mise à jour : ${targetIP} → ${mac}`);
+  consoleLine('cl-ok', `ARP résolu : ${targetIP} → ${mac}`);
+
+  // Show frame decomposition
+  showArpFrame(targetIP, mac);
+  document.getElementById('arp-pcb-icon').classList.add('glow');
+  setTimeout(() => document.getElementById('arp-pcb-icon').classList.remove('glow'), 2000);
+
+  if (!S.unlocked.includes(2)) setTimeout(() => unlock(2), 1200);
+  arpBusy = false;
+}
+
+function renderArpTable() {
+  const body = document.getElementById('arp-table-body');
+  const entries = Object.entries(S.arpTable);
+  if (!entries.length) {
+    body.innerHTML = '<tr><td colspan="4" class="dim" style="text-align:center;padding:14px;">Table vide</td></tr>';
+    return;
+  }
+  body.innerHTML = entries.map(([ip,mac],i) => `
+    <tr>
+      <td>${ip}</td><td>${mac}</td><td>eth0</td>
+      <td><span class="tag tag-ok">Résolu</span>${i===entries.length-1?'<span class="badge-new">nouveau !</span>':''}</td>
+    </tr>`).join('');
+}
+
+function showArpFrame(ip, mac) {
+  document.getElementById('arp-frame-panel').style.display = 'block';
+  const srcMac = S.pcA.mac;
+  const srcIP  = S.pcA.ip || '0.0.0.0';
+  document.getElementById('arp-frame-fields').innerHTML = `
+    <div class="pkt-field pf-eth"><span class="f-label">MAC DST</span><span class="f-value">FF:FF:FF:FF:FF:FF</span></div>
+    <div class="pkt-field pf-eth"><span class="f-label">MAC SRC</span><span class="f-value">${srcMac}</span></div>
+    <div class="pkt-field pf-eth"><span class="f-label">EtherType</span><span class="f-value">0x0806</span></div>
+    <div class="pkt-field pf-ip"><span class="f-label">Opcode</span><span class="f-value">0x0001 (Request)</span></div>
+    <div class="pkt-field pf-ip"><span class="f-label">IP SRC</span><span class="f-value">${srcIP}</span></div>
+    <div class="pkt-field pf-ip"><span class="f-label">IP DST</span><span class="f-value">${ip}</span></div>
+    <div class="pkt-field pf-ip"><span class="f-label">MAC DST visée</span><span class="f-value">00:00:00:00:00:00</span></div>
+  `;
+}
+
+document.getElementById('btn-arp-send').addEventListener('click', arpSend);
+document.getElementById('btn-arp-reset').addEventListener('click', () => {
+  S.arpTable = {};
+  renderArpTable();
+  document.getElementById('arp-log').innerHTML = '<span class="log-info">Réinitialisé.</span>';
+  document.getElementById('arp-arrow-label').textContent = '—';
+  document.getElementById('arp-frame-panel').style.display = 'none';
+  arpBusy = false;
+});
+
+// ============================================================
+// CHAPTER 2 — FRAME BUILDER
+// ============================================================
+const MAC_SRC = 'AA:BB:CC:DD:EE:11';
+const MAC_DST = 'AA:BB:CC:DD:EE:22';
+const IP_SRC  = '192.168.10.1';
+
+const FB = {
+  step: -1,
+  eth: null, ip: null, transport: null, data: null,
+  msg: '', ipDst: '', port: 80, proto: 'udp'
+};
+
+const LAYER_DETAILS = {
+  data: {
+    cls: 'fl-data',
+    why: `Ces octets sont le message brut de ton application.
+    À cette étape, les données n'ont <strong>aucune adresse, aucun chemin</strong>.
+    Le réseau ne sait pas encore qui doit les recevoir ni comment les router.
+    C'est pourquoi on doit les envelopper, couche par couche.`
+  },
+  udp: {
+    cls: 'fl-udp',
+    why: `<strong>Pourquoi UDP ? </strong>Tu veux envoyer ton message rapidement, sans établir de connexion.
+    UDP ajoute juste <span class="math">2+2+2+2 = 8 octets</span> pour multiplexer les connexions (ports) et vérifier l'intégrité (checksum).
+    <strong>Pas d'ACK, pas de retransmission</strong> — si le paquet se perd, l'application gère (ou pas).
+    Usage typique : DNS (une requête = une réponse), streaming, jeux en ligne.`
+  },
+  tcp: {
+    cls: 'fl-tcp',
+    why: `<strong>Pourquoi TCP ? </strong>Tu veux la fiabilité. TCP établit une connexion (3-way handshake),
+    numérote chaque octet (seq/ack), garantit l'ordre et retransmet les paquets perdus.
+    Coût : <span class="math">20 octets min</span> de header + latence du handshake.
+    Usage typique : HTTP, SSH, FTP — tout ce qui ne peut pas se permettre de pertes.`
+  },
+  ip: {
+    cls: 'fl-ip',
+    why: `<strong>Pourquoi IP ? </strong>UDP/TCP savent multiplexer des connexions, mais ils ne savent pas <em>router</em>.
+    IP ajoute les adresses source et destination <span class="math">(4+4 = 8 octets)</span>
+    et les mécanismes de routage : TTL (évite les boucles), protocole (quel est le contenu), checksum.
+    En tout : <span class="math">version(1)+IHL(1)+TOS(1)+longueur(2)+ID(2)+flags(2)+TTL(1)+proto(1)+checksum(2)+srcIP(4)+dstIP(4) = 20 octets</span> minimum.`
+  },
+  eth: {
+    cls: 'fl-eth',
+    why: `<strong>Pourquoi Ethernet ? </strong>IP s'occupe du routage <em>logique</em> (d'un réseau à l'autre).
+    Ethernet s'occupe du transport <em>physique</em> sur ton LAN.
+    Il adresse par <strong>MAC</strong> (obtenue via ARP), pas par IP.
+    <span class="math">MAC_DST(6) + MAC_SRC(6) + EtherType(2) = 14 octets</span>.
+    Pourquoi 6 octets pour une MAC ? <span class="math">2⁴⁸ ≈ 281 billions</span> d'adresses — assez pour toutes les cartes réseau jamais fabriquées.`
+  }
+};
+
+function fbGetData() {
+  return {
+    msg:   document.getElementById('fb-msg').value   || 'Hello, réseau !',
+    proto: document.getElementById('fb-proto').value || 'udp',
+    ipDst: document.getElementById('fb-ip-dst').value || '192.168.10.50',
+    port:  parseInt(document.getElementById('fb-port').value) || 80
+  };
+}
+
+function fbReset() {
+  FB.step = -1;
+  document.getElementById('btn-fb-data').disabled = false;
+  document.getElementById('btn-fb-transport').disabled = true;
+  document.getElementById('btn-fb-ip').disabled = true;
+  document.getElementById('btn-fb-eth').disabled = true;
+  document.getElementById('fb-stack').innerHTML =
+    '<div style="color:var(--text2);font-size:0.84em;text-align:center;padding:20px 0;">↑ Clique sur <strong style="color:var(--text);">① Données</strong> pour commencer</div>';
+  document.getElementById('fb-hexdump-panel').style.display = 'none';
+  document.getElementById('fb-binary-panel').style.display = 'none';
+  fbUpdateStepDots(-1);
+  document.getElementById('fb-step-label').textContent = 'En attente';
+  consoleLine('cl-info', 'Frame builder réinitialisé.');
+}
+
+function fbUpdateStepDots(step) {
+  document.querySelectorAll('.fb-step-dot').forEach((d,i) => {
+    d.classList.remove('done','active');
+    if (i < step) d.classList.add('done');
+    else if (i === step) d.classList.add('active');
+  });
+}
+
+function fbAddLayer(type) {
+  const stack = document.getElementById('fb-stack');
+  const d = fbGetData();
+  FB.step++;
+  fbUpdateStepDots(FB.step);
+
+  const labels = {
+    data: `① Données`, udp: `② Transport`, tcp: `② Transport`,
+    ip: `③ Réseau`, eth: `④ Liaison`
+  };
+  const steps = {data:'Données application', udp:'Encapsulation UDP', tcp:'Encapsulation TCP', ip:'Encapsulation IP', eth:'Encapsulation Ethernet'};
+  document.getElementById('fb-step-label').textContent = steps[type] || '';
+
+  // Build field HTML
+  let fieldsHtml = '';
+  let layerInfo = '';
+  let sizeLabel = '';
+
+  if (type === 'data') {
+    const bytes = Array.from(d.msg).map(c=>c.charCodeAt(0));
+    sizeLabel = bytes.length + ' octets';
+    layerInfo = `"${d.msg}"`;
+    fieldsHtml = `<div class="ld-field ldf-data"><span class="ld-label">Message</span><span class="ld-val">"${d.msg}"</span><span class="ld-size">${bytes.length} oct</span></div>`;
+  } else if (type === 'udp') {
+    const dataLen = Array.from(d.msg).length;
+    const udpLen = 8 + dataLen;
+    sizeLabel = '8 octets';
+    layerInfo = `:12345 → :${d.port}`;
+    fieldsHtml = `
+      <div class="ld-field ldf-udp"><span class="ld-label">Src Port</span><span class="ld-val">12345</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-udp"><span class="ld-label">Dst Port</span><span class="ld-val">${d.port}</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-udp"><span class="ld-label">Longueur</span><span class="ld-val">${udpLen}</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-udp"><span class="ld-label">Checksum</span><span class="ld-val">0x0000</span><span class="ld-size">2 oct</span></div>`;
+  } else if (type === 'tcp') {
+    sizeLabel = '20 octets';
+    layerInfo = `:12345 → :${d.port} [SYN→ACK→DATA]`;
+    fieldsHtml = `
+      <div class="ld-field ldf-tcp"><span class="ld-label">Src Port</span><span class="ld-val">12345</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Dst Port</span><span class="ld-val">${d.port}</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Seq Num</span><span class="ld-val">0x00000001</span><span class="ld-size">4 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Ack Num</span><span class="ld-val">0x00000000</span><span class="ld-size">4 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Flags</span><span class="ld-val">PSH ACK</span><span class="ld-size">4 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Window</span><span class="ld-val">65535</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-tcp"><span class="ld-label">Checksum</span><span class="ld-val">0xE5A0</span><span class="ld-size">2 oct</span></div>`;
+  } else if (type === 'ip') {
+    sizeLabel = '20 octets';
+    layerInfo = `${IP_SRC} → ${d.ipDst}  TTL=64  Proto=${d.proto==='udp'?'17 (UDP)':'6 (TCP)'}`;
+    fieldsHtml = `
+      <div class="ld-field ldf-ip"><span class="ld-label">Version</span><span class="ld-val">4</span><span class="ld-size">4 bits</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">IHL</span><span class="ld-val">5 (×4=20)</span><span class="ld-size">4 bits</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">Total Len</span><span class="ld-val">auto</span><span class="ld-size">2 oct</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">TTL</span><span class="ld-val">64</span><span class="ld-size">1 oct</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">Proto</span><span class="ld-val">${d.proto==='udp'?'17':'6'}</span><span class="ld-size">1 oct</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">IP SRC</span><span class="ld-val">${IP_SRC}</span><span class="ld-size">4 oct</span></div>
+      <div class="ld-field ldf-ip"><span class="ld-label">IP DST</span><span class="ld-val">${d.ipDst}</span><span class="ld-size">4 oct</span></div>`;
+  } else if (type === 'eth') {
+    sizeLabel = '14 octets';
+    layerInfo = `${MAC_SRC} → ${MAC_DST}  0x${d.proto==='udp'?'0800':'0800'}`;
+    fieldsHtml = `
+      <div class="ld-field ldf-eth"><span class="ld-label">MAC DST</span><span class="ld-val">${MAC_DST}</span><span class="ld-size">6 oct</span></div>
+      <div class="ld-field ldf-eth"><span class="ld-label">MAC SRC</span><span class="ld-val">${MAC_SRC}</span><span class="ld-size">6 oct</span></div>
+      <div class="ld-field ldf-eth"><span class="ld-label">EtherType</span><span class="ld-val">0x0800 (IPv4)</span><span class="ld-size">2 oct</span></div>`;
+  }
+
+  const det = LAYER_DETAILS[type] || {};
+
+  // Clear placeholder
+  const placeholder = stack.querySelector('[style*="text-align:center"]');
+  if (placeholder) placeholder.remove();
+
+  // Prepend new layer (visually wraps the existing content)
+  const layerEl = document.createElement('div');
+  layerEl.className = 'frame-layer ' + (det.cls || '');
+  layerEl.dataset.type = type;
+  layerEl.innerHTML = `
+    <span class="fl-badge">${type.toUpperCase()}</span>
+    <span class="fl-size">${sizeLabel}</span>
+    <span class="fl-info">${layerInfo}</span>
+    <span class="fl-hint">▼ détails</span>
+  `;
+  stack.insertBefore(layerEl, stack.firstChild);
+
+  // Detail panel (shown on click)
+  const detEl = document.createElement('div');
+  detEl.className = 'layer-detail';
+  detEl.innerHTML = `<div class="ld-fields">${fieldsHtml}</div><div class="ld-why">${det.why||''}</div>`;
+  stack.insertBefore(detEl, layerEl.nextSibling);
+
+  layerEl.addEventListener('click', () => {
+    const wasOpen = detEl.classList.contains('open');
+    document.querySelectorAll('.layer-detail').forEach(d => d.classList.remove('open'));
+    if (!wasOpen) detEl.classList.add('open');
+    layerEl.querySelector('.fl-hint').textContent = detEl.classList.contains('open') ? '▲ fermer' : '▼ détails';
+  });
+
+  consoleLine('cl-ok', `+ Couche ${type.toUpperCase()} ajoutée (${sizeLabel})`);
+
+  // Enable next button
+  if (type === 'data') {
+    document.getElementById('btn-fb-data').disabled = true;
+    document.getElementById('btn-fb-transport').disabled = false;
+  } else if (type === 'udp' || type === 'tcp') {
+    document.getElementById('btn-fb-transport').disabled = true;
+    document.getElementById('btn-fb-ip').disabled = false;
+  } else if (type === 'ip') {
+    document.getElementById('btn-fb-ip').disabled = true;
+    document.getElementById('btn-fb-eth').disabled = false;
+  } else if (type === 'eth') {
+    document.getElementById('btn-fb-eth').disabled = true;
+    fbShowHexdump();
+    if (!S.unlocked.includes(3)) setTimeout(() => unlock(3), 1000);
+  }
+}
+
+function fbShowHexdump() {
+  const d = fbGetData();
+  const dataBytes = Array.from(d.msg).map(c => c.charCodeAt(0));
+  const isUdp = d.proto === 'udp';
+  const udpLen = 8 + dataBytes.length;
+  const ipLen  = 20 + udpLen;
+
+  // ETH (14)
+  const eth = [
+    ...MAC_DST.split(':').map(h=>parseInt(h,16)),
+    ...MAC_SRC.split(':').map(h=>parseInt(h,16)),
+    0x08, 0x00
+  ];
+  // IP (20)
+  const ipParts = d.ipDst.split('.').map(Number);
+  const srcParts = IP_SRC.split('.').map(Number);
+  const ip = [
+    0x45,0x00,
+    (ipLen>>8)&0xFF, ipLen&0xFF,
+    0x12,0x34,0x00,0x00,
+    0x40, isUdp?0x11:0x06, 0x00,0x00,
+    ...srcParts, ...ipParts
+  ];
+  // Transport (8 or 20)
+  let tr;
+  if (isUdp) {
+    tr = [0x30,0x39, (d.port>>8)&0xFF, d.port&0xFF, (udpLen>>8)&0xFF, udpLen&0xFF, 0x00,0x00];
+  } else {
+    tr = [0x30,0x39, (d.port>>8)&0xFF, d.port&0xFF,
+          0x00,0x00,0x00,0x01, 0x00,0x00,0x00,0x00,
+          0x50,0x18, 0xFF,0xFF, 0x00,0x00, 0x00,0x00];
+  }
+  const all = [...eth, ...ip, ...tr, ...dataBytes];
+  const ethEnd = eth.length, ipEnd = ethEnd + ip.length, trEnd = ipEnd + tr.length;
+
+  // Hexdump
+  let html = '';
+  for (let i = 0; i < all.length; i += 16) {
+    const chunk = all.slice(i, i+16);
+    html += `<span style="color:var(--text2);">${b2h(i,2)}  </span>`;
+    chunk.forEach((byte,j) => {
+      const abs = i+j;
+      const cls = abs<ethEnd?'hex-eth':abs<ipEnd?'hex-ip':abs<trEnd?'hex-udp':'hex-data';
+      html += `<span class="${cls}">${b2h(byte)} </span>`;
+      if (j===7) html += ' ';
+    });
+    html += '  ';
+    chunk.forEach((byte,j) => {
+      const abs = i+j;
+      const cls = abs<ethEnd?'hex-eth':abs<ipEnd?'hex-ip':abs<trEnd?'hex-udp':'hex-data';
+      const ch = byte>=32&&byte<127?String.fromCharCode(byte):'.';
+      html += `<span class="${cls}">${ch}</span>`;
+    });
+    html += '\n';
+  }
+  document.getElementById('fb-hexdump').innerHTML = html;
+  document.getElementById('fb-hexdump-panel').style.display = 'block';
+
+  // Binary
+  const binEl = document.getElementById('fb-binary');
+  let binHtml = '';
+  all.slice(0,48).forEach((byte,i) => {
+    const color = i<ethEnd?'#88b8ff':i<ipEnd?'#9deca8':i<trEnd?'#ffe082':'#d0b3ff';
+    binHtml += `<span style="color:${color};margin-right:3px;">${byte.toString(2).padStart(8,'0')}</span>`;
+  });
+  if (all.length>48) binHtml += `<span class="dim"> …+${all.length-48} octets</span>`;
+  binEl.innerHTML = binHtml;
+  const trLabel = isUdp ? 'UDP' : 'TCP';
+  document.getElementById('fb-bin-legend').innerHTML = `
+    <span><span style="color:#88b8ff;">■</span> ETH (${eth.length} oct)</span>
+    <span><span style="color:#9deca8;">■</span> IP (${ip.length} oct)</span>
+    <span><span style="color:#ffe082;">■</span> ${trLabel} (${tr.length} oct)</span>
+    <span><span style="color:#d0b3ff;">■</span> Données (${dataBytes.length} oct)</span>
+  `;
+  document.getElementById('fb-binary-panel').style.display = 'block';
+}
+
+document.getElementById('btn-fb-data').addEventListener('click', () => fbAddLayer('data'));
+document.getElementById('btn-fb-transport').addEventListener('click', () => {
+  const p = document.getElementById('fb-proto').value;
+  fbAddLayer(p);
+});
+document.getElementById('btn-fb-ip').addEventListener('click', () => fbAddLayer('ip'));
+document.getElementById('btn-fb-eth').addEventListener('click', () => fbAddLayer('eth'));
+document.getElementById('btn-fb-reset').addEventListener('click', fbReset);
+
+// ============================================================
+// CHAPTER 3 — TRANSPORT SIMULATION
+// ============================================================
+let simBusy = false;
+
+async function simUdpLose() {
+  if (simBusy) return; simBusy = true;
+  const pkt = document.getElementById('sim-udp-pkt');
+  document.getElementById('transport-log').innerHTML = '';
+  logLine('transport-log','log-send','→ UDP: envoi du datagramme...');
+  pkt.style.background = 'var(--c4)'; pkt.style.left = '0%'; pkt.style.transition='none';
+  pkt.classList.add('visible');
+  await sleep(50);
+  pkt.style.transition = 'left 1s ease'; pkt.style.left = '50%';
+  await sleep(600);
+  pkt.classList.remove('visible');
+  await sleep(200);
+  logLine('transport-log','log-err','✗ Paquet perdu en transit !');
+  logLine('transport-log','log-err','  → Aucun ACK, aucune retransmission — UDP s\'en fiche.');
+  logLine('transport-log','log-warn','  → Application responsable de gérer la perte (ou de l\'ignorer).');
+  if (!S.unlocked.includes(4)) setTimeout(() => unlock(4), 1200);
+  simBusy = false;
+}
+
+async function simTcpRetransmit() {
+  if (simBusy) return; simBusy = true;
+  const pkt = document.getElementById('sim-tcp-pkt');
+  const lbl = document.getElementById('sim-tcp-label');
+  document.getElementById('transport-log').innerHTML = '';
+
+  const steps = [
+    {dir:1, color:'var(--c2)',   txt:'→ SYN  (seq=100)', lbl:'SYN →'},
+    {dir:-1,color:'var(--green)',txt:'← SYN-ACK (seq=200, ack=101)', lbl:'← SYN-ACK'},
+    {dir:1, color:'var(--c2)',   txt:'→ ACK  (ack=201)', lbl:'ACK →'},
+    {dir:1, color:'var(--c2)',   txt:'→ DATA (seq=201) [envoi]', lbl:'DATA →'},
+    {dir:-1,color:'var(--green)',txt:'← ACK  (ack=209) ✓ reçu !', lbl:'← ACK'},
+    {dir:1, color:'var(--text2)',txt:'→ FIN  (seq=209)', lbl:'FIN →'},
+    {dir:-1,color:'var(--text2)',txt:'← ACK  (ack=210) connexion fermée', lbl:'← ACK'},
+  ];
+
+  for (const s of steps) {
+    logLine('transport-log','log-send',s.txt);
+    lbl.textContent = s.lbl;
+    const from = s.dir===1?'0%':'90%', to = s.dir===1?'90%':'0%';
+    pkt.style.background = s.color;
+    pkt.style.left = from; pkt.style.transition='none';
+    pkt.classList.add('visible');
+    await sleep(50);
+    pkt.style.transition='left 0.7s ease';
+    pkt.style.left = to;
+    await sleep(800);
+    pkt.classList.remove('visible');
+    await sleep(150);
+  }
+
+  logLine('transport-log','log-info','✓ Connexion fermée proprement. Chaque octet était numéroté et acquitté.');
+  if (!S.unlocked.includes(4)) setTimeout(() => unlock(4), 800);
+  simBusy = false;
+}
+
+document.getElementById('btn-sim-udp-lose').addEventListener('click', simUdpLose);
+document.getElementById('btn-sim-tcp-retransmit').addEventListener('click', simTcpRetransmit);
+
+// ============================================================
+// CHAPTER 4 — PROTOCOLS
+// ============================================================
+const PROTOCOLS = [
+  {
+    id:'http', name:'HTTP', port:'TCP :80', cls:'p-http',
+    tags:['tcp','plain'],
+    desc:'Protocole de transfert hypertexte — transfert de pages web en clair.',
+    why:`<p><strong>Pourquoi TCP ?</strong> Une page HTML peut faire des centaines de paquets. Si un seul se perd, la page s'affiche corrompue. TCP garantit l'ordre et la livraison.</p>
+    <p><strong>Pourquoi en clair ?</strong> HTTP n'est pas chiffré — tout intermédiaire (proxy, routeur) peut lire le contenu. C'est pourquoi HTTPS existe.</p>
+    <div style="margin-top:10px;font-family:monospace;font-size:0.82em;background:var(--bg);padding:10px;border-radius:4px;line-height:1.8;">
+    <span style="color:#58a6ff;">GET</span> <span style="color:#9deca8;">/index.html</span> HTTP/1.1<br>
+    <span style="color:var(--orange);">Host:</span> example.com<br>
+    <span style="color:var(--orange);">Accept:</span> text/html<br><br>
+    HTTP/1.1 <span style="color:#3fb950;">200 OK</span><br>
+    <span style="color:var(--orange);">Content-Type:</span> text/html<br>
+    <span style="color:var(--text2);">&lt;html&gt;...&lt;/html&gt;</span>
+    </div>`
+  },
+  {
+    id:'https', name:'HTTPS / TLS', port:'TCP :443', cls:'p-https',
+    tags:['tcp','enc'],
+    desc:'HTTP chiffré par TLS — toute la communication est opaque pour les intermédiaires.',
+    why:`<p><strong>Pourquoi TLS ?</strong> TLS (Transport Layer Security) s'intercale entre TCP et HTTP. Il négocie une clé symétrique via un handshake asymétrique, puis chiffre tout le flux.</p>
+    <p><strong>Ce qu'un proxy voit avec HTTPS :</strong> uniquement la connexion TCP et le nom de domaine (SNI en clair). Le contenu est illisible.</p>
+    <div style="margin-top:10px;font-family:monospace;font-size:0.82em;background:var(--bg);padding:10px;border-radius:4px;line-height:1.8;color:var(--text2);">
+    → CONNECT example.com:443 HTTP/1.1<br>
+    ← 200 Connection Established<br>
+    <span style="color:var(--red);">█▓▒░ TLS ClientHello ░▒▓█</span><br>
+    <span style="color:var(--red);">█▓▒░ données chiffrées ░▒▓█</span><br>
+    <span style="font-size:0.85em;">(le proxy ne voit que du bruit)</span>
+    </div>`
+  },
+  {
+    id:'ssh', name:'SSH', port:'TCP :22', cls:'p-ssh',
+    tags:['tcp','enc'],
+    desc:'Accès shell sécurisé à distance — authentification par clé ou mot de passe.',
+    why:`<p><strong>Pourquoi TCP ?</strong> L'administration distante ne tolère aucune perte : une commande mal reçue peut avoir des conséquences graves.</p>
+    <p><strong>Pourquoi chiffré ?</strong> Sans chiffrement, n'importe quel intermédiaire peut capturer le mot de passe et les commandes (c'était le cas de Telnet, le prédécesseur de SSH).</p>
+    <p><strong>Séquence de connexion :</strong> échange de clés Diffie-Hellman → authentification → tunnel chiffré → shell.</p>`
+  },
+  {
+    id:'ftp', name:'FTP', port:'TCP :21 + :20', cls:'p-ftp',
+    tags:['tcp','plain'],
+    desc:'File Transfer Protocol — transfert de fichiers. Deux connexions TCP : contrôle (21) et données (20).',
+    why:`<p><strong>Pourquoi deux ports ?</strong> FTP est historique (1971). Le canal de contrôle (:21) transporte les commandes (LIST, STOR, RETR). Le canal de données (:20) transporte les fichiers. Cette séparation est une particularité unique.</p>
+    <p><strong>Problème :</strong> FTP transfère les mots de passe en clair → préférer SFTP (SSH File Transfer Protocol, port 22) ou FTPS (FTP over TLS).</p>`
+  },
+  {
+    id:'dns', name:'DNS', port:'UDP :53 (TCP :53)', cls:'p-dns',
+    tags:['udp'],
+    desc:'Résolution de noms — traduit "example.com" en "93.184.216.34".',
+    why:`<p><strong>Pourquoi UDP ?</strong> Une requête DNS tient dans un seul paquet (~64 octets pour la requête, ~100 pour la réponse). UDP est parfait : pas besoin d'établir une connexion pour un échange aussi court.</p>
+    <p><strong>Quand TCP ?</strong> Pour les transferts de zone (AXFR) entre serveurs DNS, ou quand la réponse dépasse 512 octets (réponses DNS larges, DNSSEC).</p>
+    <div style="margin-top:10px;font-family:monospace;font-size:0.82em;background:var(--bg);padding:10px;border-radius:4px;line-height:1.8;">
+    → QUERY A "example.com" (type=1)<br>
+    ← ANSWER: example.com → 93.184.216.34 (TTL=3600)
+    </div>`
+  },
+  {
+    id:'dhcp', name:'DHCP', port:'UDP :67/:68', cls:'p-dhcp',
+    tags:['udp'],
+    desc:'Attribution automatique d\'adresses IP — 4 messages : Discover, Offer, Request, Ack.',
+    why:`<p><strong>Pourquoi UDP ?</strong> Au moment du DHCP Discover, le client n'a pas encore d'IP — impossible d'établir une connexion TCP. UDP avec broadcast (255.255.255.255) est la seule option.</p>
+    <p><strong>Les 4 étapes DORA :</strong><br>
+    <strong>D</strong>iscover (broadcast → "Y a-t-il un serveur DHCP ?")<br>
+    <strong>O</strong>ffer (serveur → "Je propose 192.168.1.10")<br>
+    <strong>R</strong>equest (client → "J'accepte 192.168.1.10")<br>
+    <strong>A</strong>ck (serveur → "C'est confirmé, bail 24h")</p>`
+  },
+  {
+    id:'sip', name:'SIP / VoIP', port:'UDP :5060', cls:'p-sip',
+    tags:['udp'],
+    desc:'Session Initiation Protocol — signalisation pour les appels vocaux sur IP.',
+    why:`<p><strong>Pourquoi UDP ?</strong> La voix tolère quelques paquets perdus (un silence de 20ms passe inaperçu) mais pas la latence. Un retard de 150ms rend la conversation impossible. UDP est donc préféré pour le flux audio (RTP).</p>
+    <p><strong>SIP vs RTP :</strong> SIP gère la signalisation (établir/terminer l'appel). RTP (Real-time Transport Protocol) transporte les données audio/vidéo. Deux protocoles distincts pour deux rôles distincts.</p>`
+  },
+  {
+    id:'icmp', name:'ICMP / Ping', port:'IP (sans port)', cls:'p-icmp',
+    tags:[],
+    desc:'Internet Control Message Protocol — diagnostic réseau. Pas de couche transport : directement sur IP.',
+    why:`<p><strong>Pas de TCP/UDP ?</strong> ICMP est encapsulé directement dans IP (protocole n°1). Il n'utilise pas de ports car il n'y a pas de notion de connexion ni de service à multiplexer.</p>
+    <p><strong>Types ICMP utiles :</strong><br>
+    Type 8 = Echo Request (ping →)<br>
+    Type 0 = Echo Reply (pong ←)<br>
+    Type 11 = Time Exceeded (TTL épuisé → utilisé par traceroute)</p>`
+  }
+];
+
+function renderProtoGrid() {
+  const grid = document.getElementById('proto-grid');
+  grid.innerHTML = PROTOCOLS.map(p => {
+    const tags = p.tags.map(t => {
+      if (t==='tcp') return `<span class="pc-tag pt-tcp">TCP</span>`;
+      if (t==='udp') return `<span class="pc-tag pt-udp">UDP</span>`;
+      if (t==='enc') return `<span class="pc-tag pt-enc">🔒 Chiffré</span>`;
+      if (t==='plain') return `<span class="pc-tag" style="background:rgba(248,81,73,0.15);color:var(--red);border:1px solid var(--red);">🔓 En clair</span>`;
+      return '';
+    }).join('');
+    return `<div class="proto-card ${p.cls}" data-proto="${p.id}">
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-port">${p.port}</div>
+      <div class="pc-tags">${tags}</div>
+      <div class="pc-desc">${p.desc}</div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.proto-card').forEach(card => {
+    card.addEventListener('click', () => protoSelect(card.dataset.proto));
+  });
+}
+
+function protoSelect(id) {
+  const p = PROTOCOLS.find(x => x.id === id);
+  if (!p) return;
+  document.querySelectorAll('.proto-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`[data-proto="${id}"]`).classList.add('selected');
+
+  const panel = document.getElementById('proto-detail');
+  document.getElementById('pd-name').textContent = p.name + ' — ' + p.port;
+  document.getElementById('pd-content').innerHTML = p.why;
+  panel.classList.add('open');
+  consoleLine('cl-info', `Protocole sélectionné : ${p.name}`);
+}
+
+document.getElementById('pd-close').addEventListener('click', () => {
+  document.getElementById('proto-detail').classList.remove('open');
+  document.querySelectorAll('.proto-card').forEach(c => c.classList.remove('selected'));
+});
+
+// ============================================================
+// INIT
+// ============================================================
+window.onerror = function(msg, src, line) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#f85149;color:#fff;padding:8px 14px;font-family:monospace;font-size:12px;z-index:9999;';
+  d.textContent = 'JS ERROR: ' + msg + ' (ligne ' + line + ')';
+  document.body.appendChild(d);
+};
+
+function init() {
+  renderArpTable();
+  renderProtoGrid();
+  fbReset();
+  consoleLine('cl-info', 'NetLab Quest v2 — configure PC-A pour commencer (Chapitre 1).');
+}
+init();
+</script>
+</body>
+</html>

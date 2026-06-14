@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Labo Réseau Interactif</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --c2: #0069d9; --c3: #218838; --c4: #e0a800; --capp: #6f42c1;
+  --c2-light: #cce0ff; --c3-light: #c3e6cb; --c4-light: #fff3cd; --capp-light: #e2d9f3;
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --border: #30363d;
+  --text: #c9d1d9; --text2: #8b949e; --green: #3fb950; --red: #f85149; --orange: #d29922;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; margin: 0; }
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+  width: 230px; background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100;
+}
+#sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+#sidebar-header h1 { font-size: 1em; color: var(--text); letter-spacing: 1px; text-transform: uppercase; }
+#sidebar-header p { font-size: 0.75em; color: var(--text2); margin-top: 4px; }
+.nav-section { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.nav-label { font-size: 0.65em; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 16px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px; cursor: pointer;
+  border-left: 3px solid transparent; transition: all 0.15s; color: var(--text2); font-size: 0.85em;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--bg3); color: var(--text); }
+.nav-item.active.l2 { border-left-color: var(--c2); }
+.nav-item.active.l3 { border-left-color: var(--c3); }
+.nav-item.active.l4 { border-left-color: var(--c4); }
+.nav-item.active.lapp { border-left-color: var(--capp); }
+.nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-l2 { background: var(--c2); }
+.dot-l3 { background: var(--c3); }
+.dot-l4 { background: var(--c4); }
+.dot-lapp { background: var(--capp); }
+
+/* ===== MAIN ===== */
+#main { margin-left: 230px; flex: 1; padding: 0; min-height: 100vh; }
+.module { display: none; padding: 24px; animation: fadein 0.2s ease; }
+.module.active { display: block; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== MODULE HEADER ===== */
+.mod-header { margin-bottom: 24px; }
+.layer-badge {
+  display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 0.72em;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;
+}
+.badge-l2 { background: var(--c2); color: #fff; }
+.badge-l3 { background: var(--c3); color: #fff; }
+.badge-l4 { background: var(--c4); color: #333; }
+.badge-lapp { background: var(--capp); color: #fff; }
+.mod-header h2 { font-size: 1.4em; margin-bottom: 6px; }
+.mod-header .analogy { color: var(--text2); font-style: italic; font-size: 0.92em; border-left: 3px solid var(--border); padding-left: 12px; }
+
+/* ===== PANEL ===== */
+.panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+.panel-title { font-size: 0.72em; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 14px; font-weight: 700; }
+
+/* ===== FORM CONTROLS ===== */
+input[type="text"], input[type="number"], select, textarea {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 7px 10px; border-radius: 6px; font-family: inherit; font-size: 0.9em;
+  outline: none; transition: border-color 0.15s;
+}
+input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus { border-color: var(--c2); }
+.btn {
+  padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.88em;
+  font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--c2); color: #fff; }
+.btn-primary:hover { background: #0056b3; }
+.btn-success { background: var(--green); color: #000; }
+.btn-success:hover { background: #2da844; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #d73a49; }
+.btn-warn { background: var(--orange); color: #000; }
+.btn-warn:hover { background: #b88400; }
+.btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--border); }
+.btn-sm { padding: 4px 10px; font-size: 0.8em; }
+
+/* ===== DIAGRAM AREA ===== */
+.diagram { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 20px; position: relative; min-height: 140px; }
+
+/* ===== NODES (machines réseau) ===== */
+.nodes-row { display: flex; align-items: center; justify-content: space-around; gap: 12px; }
+.node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 80px; }
+.node-icon {
+  width: 56px; height: 40px; border-radius: 6px; background: var(--bg3); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 1.5em; transition: border-color 0.3s;
+}
+.node-label { font-size: 0.75em; color: var(--text2); text-align: center; }
+.node-sublabel { font-size: 0.68em; color: var(--text2); font-family: monospace; }
+.node-icon.active { border-color: var(--green); box-shadow: 0 0 8px rgba(63,185,80,0.3); }
+
+/* ===== ARROW TRACK ===== */
+.arrow-track { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 120px; position: relative; }
+.arrow-line { width: 100%; height: 2px; background: var(--border); position: relative; border-radius: 2px; }
+.arrow-packet {
+  position: absolute; top: -7px; width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 0.7em;
+  transition: left 1.2s cubic-bezier(.4,0,.2,1); opacity: 0;
+}
+.arrow-packet.visible { opacity: 1; }
+.arrow-label { font-size: 0.7em; color: var(--text2); text-align: center; max-width: 150px; }
+
+/* ===== LOG ZONE ===== */
+.log-zone {
+  font-family: 'Courier New', monospace; font-size: 0.82em; background: #000; border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px; max-height: 160px; overflow-y: auto; line-height: 1.6;
+}
+.log-line { animation: fadein 0.2s ease; }
+.log-send { color: #58a6ff; }
+.log-recv { color: var(--green); }
+.log-err  { color: var(--red); }
+.log-info { color: var(--text2); }
+.log-warn { color: var(--orange); }
+
+/* ===== PACKET FIELDS (hexdump style) ===== */
+.pkt-row { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 6px; }
+.pkt-field {
+  display: flex; flex-direction: column; align-items: center; border-radius: 4px;
+  padding: 4px 6px; font-size: 0.72em; cursor: default; position: relative;
+  transition: filter 0.15s;
+}
+.pkt-field:hover { filter: brightness(1.2); }
+.pkt-field .f-label { font-size: 0.8em; color: rgba(255,255,255,0.7); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.pkt-field .f-value { font-family: monospace; font-size: 1em; font-weight: 700; }
+.pf-eth { background: rgba(0,105,217,0.3); border: 1px solid var(--c2); color: #88b8ff; }
+.pf-ip  { background: rgba(33,136,56,0.3);  border: 1px solid var(--c3); color: #9deca8; }
+.pf-udp { background: rgba(224,168,0,0.3);  border: 1px solid var(--c4); color: #ffe082; }
+.pf-tcp { background: rgba(224,168,0,0.3);  border: 1px solid var(--c4); color: #ffe082; }
+.pf-data{ background: rgba(111,66,193,0.3); border: 1px solid var(--capp); color: #d0b3ff; }
+.tooltip-wrap { position: relative; display: inline-flex; }
+.tooltip-content {
+  display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #1c2128; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px;
+  font-size: 0.8em; white-space: nowrap; z-index: 200; pointer-events: none; color: var(--text);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.tooltip-wrap:hover .tooltip-content { display: block; }
+
+/* ===== HEXDUMP ===== */
+.hexdump { font-family: 'Courier New', monospace; font-size: 0.78em; line-height: 1.8; letter-spacing: 0.5px; }
+.hex-eth  { color: #88b8ff; }
+.hex-ip   { color: #9deca8; }
+.hex-udp  { color: #ffe082; }
+.hex-tcp  { color: #ffe082; }
+.hex-data { color: #d0b3ff; }
+
+/* ===== BINARY STRIP ===== */
+.bin-strip { display: flex; flex-wrap: wrap; gap: 2px; font-family: monospace; font-size: 0.7em; line-height: 1.4; }
+
+/* ===== TABLE ===== */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.data-table th { text-align: left; padding: 8px 12px; background: var(--bg3); color: var(--text2); font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); font-family: monospace; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg3); }
+.badge-new { background: var(--green); color: #000; border-radius: 3px; padding: 1px 6px; font-size: 0.75em; font-weight: 700; margin-left: 6px; animation: pulse 1s ease; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ===== SEQUENCE DIAGRAM ===== */
+.seq-diagram { position: relative; padding: 10px 20px; }
+.seq-step { display: flex; align-items: center; gap: 0; margin-bottom: 20px; position: relative; opacity: 0.25; transition: opacity 0.4s; }
+.seq-step.done { opacity: 1; }
+.seq-step.active { opacity: 1; }
+.seq-col { width: 90px; text-align: center; flex-shrink: 0; font-size: 0.78em; }
+.seq-arrow-area { flex: 1; display: flex; align-items: center; position: relative; min-height: 32px; }
+.seq-arrow-line { width: 0%; height: 2px; background: currentColor; transition: width 0.6s ease; position: absolute; }
+.seq-arrow-line.done { width: 100%; }
+.seq-arrowhead { position: absolute; right: 0; font-size: 0.9em; }
+.seq-arrowhead-left { position: absolute; left: 0; font-size: 0.9em; }
+.seq-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.72em; white-space: nowrap; font-family: monospace; }
+.seq-label-sub { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 0.68em; color: var(--text2); white-space: nowrap; }
+.seq-sep { text-align: center; color: var(--green); font-weight: 700; font-size: 0.85em; margin-bottom: 20px; opacity: 0.25; transition: opacity 0.4s; letter-spacing: 2px; }
+.seq-sep.done { opacity: 1; }
+.seq-controls { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ===== SNIFFER LIST ===== */
+.frame-list { font-family: monospace; font-size: 0.8em; }
+.frame-item { display: flex; gap: 12px; padding: 5px 8px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; align-items: center; }
+.frame-item:hover, .frame-item.selected { background: var(--bg3); border-color: var(--border); }
+.frame-num { color: var(--text2); min-width: 36px; }
+.frame-eth { color: #88b8ff; min-width: 60px; }
+.frame-mac { color: var(--text); min-width: 140px; }
+.frame-type { padding: 1px 6px; border-radius: 3px; font-size: 0.85em; font-weight: 700; min-width: 50px; text-align: center; }
+.ft-ipv4 { background: rgba(33,136,56,0.3); color: #9deca8; }
+.ft-arp  { background: rgba(0,105,217,0.3); color: #88b8ff; }
+.ft-ipv6 { background: rgba(111,66,193,0.3); color: #d0b3ff; }
+.frame-size { color: var(--text2); text-align: right; }
+.frame-bar { height: 4px; background: var(--border); border-radius: 2px; flex: 1; }
+.frame-bar-fill { height: 100%; border-radius: 2px; background: var(--c2); }
+
+/* ===== POOL DHCP ===== */
+.ip-pool { display: flex; flex-wrap: wrap; gap: 8px; }
+.ip-slot {
+  padding: 5px 10px; border-radius: 5px; font-family: monospace; font-size: 0.78em;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text2);
+  transition: all 0.5s; display: flex; align-items: center; gap: 5px;
+}
+.ip-slot.used { background: rgba(33,136,56,0.2); border-color: var(--c3); color: var(--green); }
+.ip-slot-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background 0.5s; }
+.ip-slot.used .ip-slot-dot { background: var(--green); }
+
+/* ===== HTTP SPLIT ===== */
+.http-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.http-pane { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.http-pane-title { font-size: 0.68em; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); margin-bottom: 8px; }
+.http-raw { font-family: monospace; font-size: 0.78em; white-space: pre; color: var(--text); line-height: 1.7; }
+.http-method { color: #58a6ff; }
+.http-path   { color: #9deca8; }
+.http-version{ color: var(--text2); }
+.http-header-key { color: var(--orange); }
+.http-status-ok  { color: var(--green); }
+.http-status-err { color: var(--red); }
+.http-body   { color: var(--capp); }
+
+/* ===== MISC ===== */
+.row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.col { flex: 1; min-width: 0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 700; }
+.tag-ok  { background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid var(--green); }
+.tag-err { background: rgba(248,81,73,0.2); color: var(--red); border: 1px solid var(--red); }
+.tag-warn{ background: rgba(210,153,34,0.2); color: var(--orange); border: 1px solid var(--orange); }
+.spacer { height: 12px; }
+.mono { font-family: monospace; }
+.dim { color: var(--text2); }
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 700px) {
+  #sidebar { width: 100%; height: auto; position: relative; }
+  #main { margin-left: 0; }
+  .http-split { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <h1>🌐 Labo Réseau</h1>
+    <p>Visualiseur interactif OSI</p>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Couche 2 — Liaison</div>
+    <div class="nav-item l2 active" data-show="sniffer" id="nav-sniffer">
+      <span class="nav-dot dot-l2"></span> Sniffer Ethernet
+    </div>
+    <div class="nav-item l2" data-show="arp" id="nav-arp">
+      <span class="nav-dot dot-l2"></span> ARP Forge
+    </div>
+    <div class="nav-item l2" data-show="encap" id="nav-encap">
+      <span class="nav-dot dot-l2"></span> Encapsulateur ★
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Couche 4 — Transport</div>
+    <div class="nav-item l4" data-show="udp" id="nav-udp">
+      <span class="nav-dot dot-l4"></span> UDP Echo
+    </div>
+    <div class="nav-item l4" data-show="tcp" id="nav-tcp">
+      <span class="nav-dot dot-l4"></span> TCP Handshake
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Services réseau</div>
+    <div class="nav-item lapp" data-show="dns" id="nav-dns">
+      <span class="nav-dot dot-lapp"></span> Mini DNS
+    </div>
+    <div class="nav-item lapp" data-show="dhcp" id="nav-dhcp">
+      <span class="nav-dot dot-lapp"></span> Mini DHCP
+    </div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Couche App — HTTP</div>
+    <div class="nav-item lapp" data-show="http" id="nav-http">
+      <span class="nav-dot dot-lapp"></span> Serveur HTTP
+    </div>
+    <div class="nav-item lapp" data-show="proxy" id="nav-proxy">
+      <span class="nav-dot dot-lapp"></span> Proxy HTTP
+    </div>
+    <div class="nav-item lapp" data-show="https" id="nav-https">
+      <span class="nav-dot dot-lapp"></span> Proxy HTTPS
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+<!-- ==================== MODULE: SNIFFER ==================== -->
+<div class="module active" id="mod-sniffer">
+  <div class="mod-header">
+    <span class="layer-badge badge-l2">Couche 2 — Liaison</span>
+    <h2>Sniffer Ethernet</h2>
+    <p class="analogy">"La carte réseau est une oreille collée au mur : elle entend TOUTES les trames, même celles qui ne lui sont pas destinées."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Simulateur de trafic</div>
+    <div style="display:flex; gap:10px; margin-bottom:14px; align-items:center; flex-wrap:wrap;">
+      <button class="btn btn-success" id="sniffer-btn">▶ Démarrer</button>
+      <button class="btn btn-ghost btn-sm" id="btn-sniffer-clear">Effacer</button>
+      <span class="dim" style="font-size:0.8em;" id="sniffer-count">0 trames capturées</span>
+    </div>
+    <div class="frame-list" id="frame-list"></div>
+  </div>
+
+  <div class="panel" id="sniffer-detail-panel" style="display:none;">
+    <div class="panel-title">Décomposition de la trame sélectionnée</div>
+    <div id="sniffer-detail"></div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: ARP ==================== -->
+<div class="module" id="mod-arp">
+  <div class="mod-header">
+    <span class="layer-badge badge-l2">Couche 2 — ARP</span>
+    <h2>ARP Forge</h2>
+    <p class="analogy">"Je connais l'IP de mon voisin mais pas son numéro de porte. Je crie dans le couloir : Qui habite au 192.168.1.50 ?"</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Simulation ARP</div>
+    <div class="diagram" style="margin-bottom:14px;">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon" id="arp-pca">💻</div>
+          <div class="node-label">PC-A</div>
+          <div class="node-sublabel" id="arp-pca-mac">AA:BB:CC:DD:EE:10</div>
+          <div class="node-sublabel">192.168.1.10</div>
+        </div>
+        <div class="arrow-track" id="arp-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="arp-pkt" style="background:var(--c2);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="arp-arrow-label" style="margin-top:8px;">—</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="arp-switch">🔀</div>
+          <div class="node-label">Switch</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line"></div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="arp-pcb">💻</div>
+          <div class="node-label">PC-B</div>
+          <div class="node-sublabel" id="arp-pcb-mac">AA:BB:CC:DD:EE:50</div>
+          <div class="node-sublabel" id="arp-pcb-ip">192.168.1.50</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+      <label class="dim" style="font-size:0.85em;">IP cible :</label>
+      <input type="text" id="arp-target-ip" value="192.168.1.50" style="width:140px;">
+      <button class="btn btn-primary" id="btn-arp-send">▶ Envoyer ARP Request</button>
+      <button class="btn btn-ghost btn-sm" id="btn-arp-reset">Réinitialiser</button>
+    </div>
+    <div class="log-zone" id="arp-log"><span class="log-info">Prêt. Entrez une IP et cliquez sur Envoyer.</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Table ARP de PC-A</div>
+    <table class="data-table">
+      <thead><tr><th>Adresse IP</th><th>Adresse MAC</th><th>Statut</th></tr></thead>
+      <tbody id="arp-table-body">
+        <tr><td colspan="3" class="dim" style="text-align:center;padding:16px;">Table vide — en attente d'une réponse ARP</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== MODULE: ENCAPSULATEUR ==================== -->
+<div class="module" id="mod-encap">
+  <div class="mod-header">
+    <span class="layer-badge badge-l2">Toutes couches — Encapsulation</span>
+    <h2>Encapsulateur de trame ★</h2>
+    <p class="analogy">"Chaque couche enveloppe le message comme une poupée russe : données → UDP → IP → Ethernet."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Composez votre paquet</div>
+    <div class="row" style="margin-bottom:14px;">
+      <div class="col">
+        <label class="dim" style="font-size:0.82em; display:block; margin-bottom:5px;">Message (données application)</label>
+        <input type="text" id="encap-msg" value="Hello, réseau !" style="width:100%;" >
+      </div>
+      <div class="col">
+        <label class="dim" style="font-size:0.82em; display:block; margin-bottom:5px;">IP destination</label>
+        <input type="text" id="encap-ip-dst" value="192.168.1.1" style="width:100%;" >
+      </div>
+      <div class="col">
+        <label class="dim" style="font-size:0.82em; display:block; margin-bottom:5px;">Port destination</label>
+        <input type="number" id="encap-port" value="80" style="width:80px;" >
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-encap-animate">▶ Envoyer la trame</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Vue couches (cliquez pour ouvrir/fermer)</div>
+    <div id="encap-layers"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Hexdump Wireshark</div>
+    <div class="diagram">
+      <div class="row" style="margin-bottom:8px; font-size:0.72em; gap:16px; flex-wrap:wrap;">
+        <span><span style="color:#88b8ff;">■</span> Ethernet</span>
+        <span><span style="color:#9deca8;">■</span> IP</span>
+        <span><span style="color:#ffe082;">■</span> UDP</span>
+        <span><span style="color:#d0b3ff;">■</span> Données</span>
+      </div>
+      <div class="hexdump" id="encap-hexdump"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Flux binaire</div>
+    <div class="diagram">
+      <div class="bin-strip" id="encap-binary"></div>
+      <div class="row" style="margin-top:8px; font-size:0.7em; gap:16px; flex-wrap:wrap;" id="encap-bin-legend"></div>
+    </div>
+  </div>
+
+  <!-- Animation packet traveling -->
+  <div class="panel" id="encap-travel-panel" style="display:none;">
+    <div class="panel-title">Trame en transit</div>
+    <div class="diagram" style="overflow:hidden; height:60px; position:relative;">
+      <div id="encap-traveler" style="position:absolute;top:50%;transform:translateY(-50%);font-size:1.5em;left:0;transition:left 2s cubic-bezier(.4,0,.2,1);">📦</div>
+      <div style="position:absolute;top:50%;left:0;right:0;height:2px;background:var(--border);transform:translateY(-50%);"></div>
+      <div style="position:absolute;top:50%;transform:translateY(-50%) translateX(-50%);left:5%;font-size:1.3em;">💻</div>
+      <div style="position:absolute;top:50%;transform:translateY(-50%) translateX(-50%);left:50%;font-size:1.3em;">🔀</div>
+      <div style="position:absolute;top:50%;transform:translateY(-50%) translateX(-50%);left:95%;font-size:1.3em;">🖥️</div>
+    </div>
+    <div class="log-zone" id="encap-travel-log" style="margin-top:10px; max-height:100px;"></div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: UDP ==================== -->
+<div class="module" id="mod-udp">
+  <div class="mod-header">
+    <span class="layer-badge badge-l4">Couche 4 — UDP</span>
+    <h2>UDP Echo</h2>
+    <p class="analogy">"La carte postale : rapide, sans garantie. Si elle se perd, personne ne le saura."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Envoi de datagramme</div>
+    <div class="diagram" style="margin-bottom:14px;">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon" id="udp-client-icon">💻</div>
+          <div class="node-label">CLIENT</div>
+          <div class="node-sublabel">:54321</div>
+        </div>
+        <div class="arrow-track" id="udp-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="udp-pkt" style="background:var(--c4);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="udp-arrow-label" style="margin-top:8px;">UDP</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="udp-server-icon">🖥️</div>
+          <div class="node-label">SERVEUR</div>
+          <div class="node-sublabel">:9999</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+      <input type="text" id="udp-msg" value="Bonjour !" style="flex:1; min-width:160px;" placeholder="Message à envoyer...">
+      <button class="btn btn-primary" id="btn-udp-send">▶ Envoyer</button>
+      <button class="btn btn-warn" id="btn-udp-lose">☠ Simuler perte</button>
+    </div>
+    <div class="log-zone" id="udp-log"><span class="log-info">Serveur UDP prêt sur :9999</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Anatomie du datagramme UDP</div>
+    <div id="udp-pkt-detail"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">UDP vs TCP — Comparaison</div>
+    <table class="data-table">
+      <thead><tr><th></th><th>UDP</th><th>TCP</th></tr></thead>
+      <tbody>
+        <tr><td>Connexion préalable</td><td><span class="tag tag-err">Non</span></td><td><span class="tag tag-ok">Oui (3-way)</span></td></tr>
+        <tr><td>Garantie de livraison</td><td><span class="tag tag-err">Non</span></td><td><span class="tag tag-ok">Oui (ACK)</span></td></tr>
+        <tr><td>Ordre des paquets</td><td><span class="tag tag-err">Non garanti</span></td><td><span class="tag tag-ok">Garanti</span></td></tr>
+        <tr><td>Overhead header</td><td><span class="tag tag-ok">8 octets</span></td><td><span class="tag tag-warn">20 octets</span></td></tr>
+        <tr><td>Vitesse</td><td><span class="tag tag-ok">Rapide</span></td><td><span class="tag tag-warn">Plus lent</span></td></tr>
+        <tr><td>Cas d'usage</td><td class="mono dim">DNS, streaming, jeux</td><td class="mono dim">HTTP, SSH, mail</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== MODULE: TCP ==================== -->
+<div class="module" id="mod-tcp">
+  <div class="mod-header">
+    <span class="layer-badge badge-l4">Couche 4 — TCP</span>
+    <h2>TCP Handshake</h2>
+    <p class="analogy">"L'appel téléphonique : on décroche, on se dit allo, on confirme qu'on s'entend, et seulement là on parle."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Séquence TCP</div>
+    <div class="diagram">
+      <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+        <div style="text-align:center; font-weight:700; color:var(--c2); min-width:80px;">CLIENT</div>
+        <div style="text-align:center; font-weight:700; color:var(--c3); min-width:80px;">SERVEUR</div>
+      </div>
+      <div id="tcp-steps"></div>
+    </div>
+    <div class="seq-controls">
+      <button class="btn btn-ghost" id="btn-tcp-step">▶ Étape suivante</button>
+      <button class="btn btn-primary" id="btn-tcp-auto">⏩ Auto</button>
+      <button class="btn btn-ghost btn-sm" id="btn-tcp-reset">↺ Rejouer</button>
+      <span class="dim" style="font-size:0.82em;margin-left:8px;" id="tcp-step-label">Prêt</span>
+    </div>
+  </div>
+
+  <div class="panel" style="display:none;" id="tcp-data-panel">
+    <div class="panel-title">Envoyer des données</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <input type="text" id="tcp-data-msg" value="GET / HTTP/1.1" style="flex:1;">
+      <button class="btn btn-primary" id="btn-tcp-data">▶ Envoyer</button>
+    </div>
+    <div class="log-zone" id="tcp-data-log" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: DNS ==================== -->
+<div class="module" id="mod-dns">
+  <div class="mod-header">
+    <span class="layer-badge badge-lapp">Service — DNS</span>
+    <h2>Mini DNS</h2>
+    <p class="analogy">"L'annuaire d'Internet : tu donnes un nom, il te rend l'adresse IP."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Résolution DNS</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+      <input type="text" id="dns-query" value="monprojet.local" style="flex:1; min-width:180px;" placeholder="Nom de domaine...">
+      <button class="btn btn-primary" id="btn-dns-resolve">▶ Résoudre</button>
+    </div>
+    <div class="diagram" style="margin-bottom:14px;">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon" id="dns-client-icon">🌐</div>
+          <div class="node-label">Navigateur</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="dns-pkt" style="background:var(--capp);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="dns-arrow-label" style="margin-top:8px;">DNS UDP :53</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="dns-server-icon">📖</div>
+          <div class="node-label">DNS Server</div>
+          <div class="node-sublabel">:5353</div>
+        </div>
+      </div>
+    </div>
+    <div class="log-zone" id="dns-log"><span class="log-info">Serveur DNS prêt. Zone chargée.</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Zone DNS (éditable)</div>
+    <table class="data-table" style="margin-bottom:10px;">
+      <thead><tr><th>Nom</th><th>IP</th><th>Type</th><th></th></tr></thead>
+      <tbody id="dns-zone-body"></tbody>
+    </table>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <input type="text" id="dns-new-name" placeholder="nouveau.local" style="flex:1;">
+      <input type="text" id="dns-new-ip" placeholder="192.168.50.10" style="width:140px;">
+      <button class="btn btn-success btn-sm" id="btn-dns-add">+ Ajouter</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Paquet DNS (format RFC 1035)</div>
+    <div id="dns-pkt-detail" class="dim" style="font-size:0.82em; font-family:monospace;">— en attente d'une requête</div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: DHCP ==================== -->
+<div class="module" id="mod-dhcp">
+  <div class="mod-header">
+    <span class="layer-badge badge-lapp">Service — DHCP</span>
+    <h2>Mini DHCP</h2>
+    <p class="analogy">"L'accueil d'hôtel : tu arrives, la réception t'attribue une chambre libre."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Simulation DHCP</div>
+    <button class="btn btn-primary" id="btn-dhcp-new" style="margin-bottom:14px;">▶ Nouvelle machine sur le réseau</button>
+    <div class="diagram" style="margin-bottom:14px;">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon" id="dhcp-client-icon">💻</div>
+          <div class="node-label">Nouveau PC</div>
+          <div class="node-sublabel">0.0.0.0</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="dhcp-pkt" style="background:var(--capp);left:0;"></div>
+          </div>
+          <div class="arrow-label" id="dhcp-arrow-label" style="margin-top:8px;">DHCP UDP :67</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="dhcp-server-icon">🗄️</div>
+          <div class="node-label">DHCP Serveur</div>
+          <div class="node-sublabel">:67</div>
+        </div>
+      </div>
+    </div>
+    <div class="log-zone" id="dhcp-log"><span class="log-info">Serveur DHCP prêt. Pool : 192.168.50.100–119</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Pool d'adresses</div>
+    <div class="ip-pool" id="dhcp-pool"></div>
+    <div style="margin-top:10px; font-size:0.8em; display:flex; gap:16px;">
+      <span><span style="color:var(--green);">●</span> Attribuée</span>
+      <span><span style="color:var(--border);">●</span> Disponible</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: HTTP ==================== -->
+<div class="module" id="mod-http">
+  <div class="mod-header">
+    <span class="layer-badge badge-lapp">Couche App — HTTP</span>
+    <h2>Serveur HTTP from Scratch</h2>
+    <p class="analogy">"Une page web = du texte dans un tuyau TCP. Rien de plus."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Forge une requête HTTP</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+      <select id="http-method" >
+        <option>GET</option><option>POST</option><option>DELETE</option><option>PUT</option>
+      </select>
+      <select id="http-route" >
+        <option>/status</option><option>/users</option><option>/unknown</option><option>/echo</option>
+      </select>
+      <button class="btn btn-primary" id="btn-http-send">▶ Envoyer la requête</button>
+    </div>
+    <div class="http-split">
+      <div>
+        <div class="http-pane">
+          <div class="http-pane-title">Requête (client → serveur)</div>
+          <div class="http-raw" id="http-req-raw"></div>
+        </div>
+      </div>
+      <div>
+        <div class="http-pane">
+          <div class="http-pane-title">Réponse (serveur → client)</div>
+          <div class="http-raw" id="http-resp-raw"><span class="dim">— en attente</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Anatomie des headers (hover pour explications)</div>
+    <table class="data-table" id="http-anatomy-table"></table>
+    <div class="log-zone" style="margin-top:12px;" id="http-log"><span class="log-info">Serveur HTTP simulé sur :8080</span></div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: PROXY ==================== -->
+<div class="module" id="mod-proxy">
+  <div class="mod-header">
+    <span class="layer-badge badge-lapp">Couche App — Proxy HTTP</span>
+    <h2>Proxy HTTP</h2>
+    <p class="analogy">"L'assistant silencieux : tu lui parles, il transmet. Il voit tout ce qui passe."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Simulation de proxy</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
+      <input type="text" id="proxy-url" value="http://example.com/index.html" style="flex:1;">
+      <button class="btn btn-primary" id="btn-proxy-send">▶ Simuler</button>
+    </div>
+    <div class="diagram" style="margin-bottom:14px;">
+      <div class="nodes-row">
+        <div class="node">
+          <div class="node-icon">🌐</div>
+          <div class="node-label">Navigateur</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="proxy-pkt1" style="background:var(--capp);left:0;"></div>
+          </div>
+          <div class="arrow-label" style="margin-top:8px;">URL absolue</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="proxy-icon">🔎</div>
+          <div class="node-label">Proxy :8888</div>
+        </div>
+        <div class="arrow-track">
+          <div class="arrow-line">
+            <div class="arrow-packet" id="proxy-pkt2" style="background:var(--green);left:0;"></div>
+          </div>
+          <div class="arrow-label" style="margin-top:8px;">URL relative</div>
+        </div>
+        <div class="node">
+          <div class="node-icon" id="proxy-server-icon">🖥️</div>
+          <div class="node-label">Serveur Web</div>
+        </div>
+      </div>
+    </div>
+    <div class="log-zone" id="proxy-log"><span class="log-info">Proxy prêt sur :8888</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Liste noire (éditable)</div>
+    <div id="proxy-blacklist-items" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="proxy-blacklist-new" placeholder="domaine.com" style="flex:1;">
+      <button class="btn btn-danger btn-sm" id="btn-proxy-bl-add">+ Bloquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODULE: HTTPS / CONNECT ==================== -->
+<div class="module" id="mod-https">
+  <div class="mod-header">
+    <span class="layer-badge badge-lapp">Couche App — Proxy HTTPS</span>
+    <h2>Proxy HTTPS (CONNECT)</h2>
+    <p class="analogy">"Le tuyau aveugle : le proxy ouvre le tunnel mais ne peut pas lire ce qui passe dedans."</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">HTTP vs HTTPS au travers d'un proxy</div>
+    <div class="http-split">
+      <div>
+        <div class="http-pane" style="border-top:3px solid var(--green);">
+          <div class="http-pane-title" style="color:var(--green);">HTTP — Proxy lit tout ✓</div>
+          <div class="http-raw">
+<span class="http-method">GET</span> <span class="http-path">http://example.com/page</span> HTTP/1.1<br>
+Host: example.com<br><br>
+<span class="dim">↓ Le proxy voit :</span><br>
+<span class="http-status-ok">GET /page HTTP/1.1</span><br>
+<span class="http-status-ok">Contenu HTML lisible</span><br>
+<span class="http-status-ok">{"data": "valeur"}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="http-pane" style="border-top:3px solid var(--red);">
+          <div class="http-pane-title" style="color:var(--red);">HTTPS — Proxy aveugle ✗</div>
+          <div class="http-raw">
+<span class="http-method">CONNECT</span> <span class="http-path">example.com:443</span> HTTP/1.1<br><br>
+<span class="dim">← Proxy répond :</span><br>
+<span class="http-status-ok">200 Connection Established</span><br><br>
+<span class="dim">↓ Après : flux opaque</span><br>
+<span class="http-status-err">█▓▒░ TLS ░▒▓█▓▒░ TLS ░▒▓█</span><br>
+<span class="http-status-err">█▒░█▓░▒█▓▒░█▓▒░█▓▒░█▓▒░█</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btn-https-animate" style="margin-bottom:14px;">▶ Animer les deux</button>
+    <div class="log-zone" id="https-log"><span class="log-info">Cliquez pour voir l'animation côte à côte.</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">TLS : qu'est-ce que le proxy voit vraiment ?</div>
+    <div id="https-bytes" style="font-family:monospace; font-size:0.8em; word-break:break-all; color:var(--red); background:var(--bg); padding:12px; border-radius:6px; min-height:40px;">
+      <span class="dim">Lance l'animation pour voir les données chiffrées…</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// UTILS
+// ============================================================
+function show(id) {
+  document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('mod-' + id).classList.add('active');
+  const nav = document.getElementById('nav-' + id);
+  if (nav) {
+    nav.classList.add('active');
+    // re-apply layer class
+    ['l2','l3','l4','lapp'].forEach(c => { if (nav.classList.contains(c)) nav.classList.add(c); });
+  }
+}
+
+function logLine(containerId, cls, text) {
+  const c = document.getElementById(containerId);
+  const d = document.createElement('div');
+  d.className = 'log-line ' + cls;
+  d.textContent = text;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function randomHex(bytes) {
+  return Array.from({length: bytes}, () => Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');
+}
+
+function ipToHex(ip) {
+  return ip.split('.').map(n => parseInt(n).toString(16).padStart(2,'0').toUpperCase()).join(' ');
+}
+
+function strToHex(s) {
+  return Array.from(s).map(c => c.charCodeAt(0).toString(16).padStart(2,'0').toUpperCase()).join(' ');
+}
+
+function strToBin(s) {
+  return Array.from(s).map(c => c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ');
+}
+
+function numToHex(n, bytes=1) {
+  return n.toString(16).padStart(bytes*2,'0').toUpperCase();
+}
+
+function animatePacket(pktEl, fromPct, toPct, color, durationMs=1200) {
+  return new Promise(r => {
+    pktEl.style.background = color;
+    pktEl.style.left = fromPct + '%';
+    pktEl.style.transition = 'none';
+    pktEl.classList.add('visible');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        pktEl.style.transition = `left ${durationMs}ms cubic-bezier(.4,0,.2,1)`;
+        pktEl.style.left = toPct + '%';
+        setTimeout(() => { pktEl.classList.remove('visible'); r(); }, durationMs + 100);
+      });
+    });
+  });
+}
+
+function makeTooltip(label, value, cls, tip) {
+  return `<div class="tooltip-wrap">
+    <div class="pkt-field ${cls}">
+      <span class="f-label">${label}</span>
+      <span class="f-value">${value}</span>
+    </div>
+    <div class="tooltip-content">${tip}</div>
+  </div>`;
+}
+
+// ============================================================
+// MODULE: SNIFFER
+// ============================================================
+let snifferTimer = null;
+let snifferFrames = [];
+let snifferCount = 0;
+
+const ETHTYPES = [
+  { type: 'IPv4', code: '0x0800', cls: 'ft-ipv4', gen: () => Math.floor(Math.random()*1400)+64 },
+  { type: 'ARP',  code: '0x0806', cls: 'ft-arp',  gen: () => 42 },
+  { type: 'IPv6', code: '0x86DD', cls: 'ft-ipv6', gen: () => Math.floor(Math.random()*1280)+40 },
+];
+
+function snifferToggle() {
+  const btn = document.getElementById('sniffer-btn');
+  if (snifferTimer) {
+    clearInterval(snifferTimer);
+    snifferTimer = null;
+    btn.textContent = '▶ Démarrer';
+    btn.className = 'btn btn-success';
+  } else {
+    snifferTimer = setInterval(snifferGenFrame, 800);
+    btn.textContent = '⏹ Arrêter';
+    btn.className = 'btn btn-danger';
+  }
+}
+
+function snifferGenFrame() {
+  snifferCount++;
+  const et = ETHTYPES[Math.floor(Math.random() * ETHTYPES.length)];
+  const size = et.gen();
+  const f = {
+    num: snifferCount,
+    iface: 'eth0',
+    mac_src: randomHex(6),
+    mac_dst: et.type === 'ARP' ? 'FF:FF:FF:FF:FF:FF' : randomHex(6),
+    etype: et,
+    size
+  };
+  snifferFrames.push(f);
+  document.getElementById('sniffer-count').textContent = snifferCount + ' trames capturées';
+  renderSnifferFrame(f);
+}
+
+function renderSnifferFrame(f) {
+  const list = document.getElementById('frame-list');
+  const pct = Math.min(100, Math.round((f.size / 1514) * 100));
+  const el = document.createElement('div');
+  el.className = 'frame-item';
+  el.dataset.idx = snifferFrames.length - 1;
+  el.innerHTML = `
+    <span class="frame-num">#${String(f.num).padStart(3,'0')}</span>
+    <span class="frame-eth">${f.iface}</span>
+    <span class="frame-mac">${f.mac_src.substr(0,8)}.. → ${f.mac_dst.substr(0,8)}..</span>
+    <span class="frame-type ${f.etype.cls}">${f.etype.type}</span>
+    <div class="frame-bar"><div class="frame-bar-fill" style="width:${pct}%;"></div></div>
+    <span class="frame-size">${f.size} oct</span>
+  `;
+  el.onclick = () => snifferSelect(el, f);
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+}
+
+function snifferSelect(el, f) {
+  document.querySelectorAll('.frame-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  const panel = document.getElementById('sniffer-detail-panel');
+  const detail = document.getElementById('sniffer-detail');
+  panel.style.display = 'block';
+
+  detail.innerHTML = `
+    <div style="margin-bottom:10px;">
+      <div class="pkt-row">
+        ${makeTooltip('MAC DST',''+f.mac_dst,'pf-eth','Adresse MAC destination (6 octets). FF:FF:FF = broadcast.')}
+        ${makeTooltip('MAC SRC',''+f.mac_src,'pf-eth','Adresse MAC source (6 octets). Identifiant matériel de la carte réseau.')}
+        ${makeTooltip('EtherType',''+f.etype.code,'pf-eth','Indique le protocole encapsulé : 0x0800=IPv4, 0x0806=ARP, 0x86DD=IPv6')}
+        ${makeTooltip('Données','[' + f.size + ' oct]','pf-data','Charge utile de la trame. Taille max (MTU) = 1500 octets.')}
+      </div>
+    </div>
+    <div class="dim" style="font-size:0.78em;">
+      Taille totale : ${f.size} octets | Interface : ${f.iface} | EtherType : ${f.etype.code} (${f.etype.type})
+    </div>
+  `;
+}
+
+function snifferClear() {
+  snifferFrames = []; snifferCount = 0;
+  document.getElementById('frame-list').innerHTML = '';
+  document.getElementById('sniffer-count').textContent = '0 trames capturées';
+  document.getElementById('sniffer-detail-panel').style.display = 'none';
+}
+
+// ============================================================
+// MODULE: ARP
+// ============================================================
+let arpTable = {};
+let arpBusy = false;
+
+async function arpSend() {
+  if (arpBusy) return;
+  arpBusy = true;
+  const ip = document.getElementById('arp-target-ip').value.trim() || '192.168.1.50';
+  const pkt = document.getElementById('arp-pkt');
+  const label = document.getElementById('arp-arrow-label');
+  const log = 'arp-log';
+  document.getElementById('arp-log').innerHTML = '';
+
+  logLine(log, 'log-send', `① PC-A → BROADCAST  ARP REQUEST "Qui a ${ip} ?" (FF:FF:FF:FF:FF:FF)`);
+  label.textContent = 'ARP REQUEST →';
+  await animatePacket(pkt, 0, 90, 'var(--c2)');
+  await sleep(400);
+
+  const knownIPs = {'192.168.1.50':'AA:BB:CC:DD:EE:50','192.168.1.1':'AA:BB:CC:DD:EE:01'};
+  const mac = knownIPs[ip] || (ip.startsWith('192.168.') ? randomHex(6) : null);
+
+  if (!mac) {
+    logLine(log, 'log-err', `✗ Timeout — ${ip} ne répond pas (machine inconnue ou hors ligne)`);
+    arpBusy = false;
+    return;
+  }
+
+  await sleep(300);
+  logLine(log, 'log-recv', `② PC-B → PC-A  ARP REPLY "C'est moi ! MA MAC = ${mac}"`);
+  label.textContent = '← ARP REPLY';
+  await animatePacket(pkt, 90, 0, 'var(--green)');
+
+  arpTable[ip] = mac;
+  renderArpTable();
+  logLine(log, 'log-info', `✓ Table ARP mise à jour : ${ip} → ${mac}`);
+  document.getElementById('arp-pcb').classList.add('active');
+  setTimeout(() => document.getElementById('arp-pcb').classList.remove('active'), 1500);
+  arpBusy = false;
+}
+
+function renderArpTable() {
+  const body = document.getElementById('arp-table-body');
+  const entries = Object.entries(arpTable);
+  if (entries.length === 0) {
+    body.innerHTML = '<tr><td colspan="3" class="dim" style="text-align:center;padding:16px;">Table vide</td></tr>';
+    return;
+  }
+  body.innerHTML = entries.map(([ip, mac], i) => `
+    <tr>
+      <td>${ip}</td>
+      <td>${mac}</td>
+      <td><span class="tag tag-ok">Résolu</span>${i === entries.length-1 ? '<span class="badge-new">nouveau !</span>' : ''}</td>
+    </tr>
+  `).join('');
+}
+
+function arpReset() {
+  arpTable = {};
+  renderArpTable();
+  document.getElementById('arp-log').innerHTML = '<span class="log-info">Réinitialisé.</span>';
+  document.getElementById('arp-arrow-label').textContent = '—';
+  arpBusy = false;
+}
+
+// ============================================================
+// MODULE: ENCAPSULATEUR
+// ============================================================
+const MAC_SRC = 'AA:BB:CC:DD:EE:11';
+const MAC_DST = 'AA:BB:CC:DD:EE:22';
+const IP_SRC  = '192.168.1.10';
+
+function encapBuild() {
+  const msg = document.getElementById('encap-msg').value || 'Hello';
+  const ipDst = document.getElementById('encap-ip-dst').value || '192.168.1.1';
+  const port = parseInt(document.getElementById('encap-port').value) || 80;
+
+  const dataBytes = Array.from(msg).map(c => c.charCodeAt(0));
+  const udpLen = 8 + dataBytes.length;
+  const ipLen = 20 + udpLen;
+
+  // Ethernet header (14 bytes)
+  const eth = [
+    ...MAC_DST.split(':').map(h => parseInt(h,16)),
+    ...MAC_SRC.split(':').map(h => parseInt(h,16)),
+    0x08, 0x00
+  ];
+  // IP header (20 bytes, simplified)
+  const ip = [
+    0x45, 0x00,
+    (ipLen >> 8) & 0xFF, ipLen & 0xFF,
+    0x12, 0x34, 0x00, 0x00, 0x40, 0x11, 0xE5, 0x35,
+    ...IP_SRC.split('.').map(Number),
+    ...ipDst.split('.').map(Number)
+  ];
+  // UDP header (8 bytes)
+  const srcPort = 12345;
+  const udp = [
+    (srcPort >> 8) & 0xFF, srcPort & 0xFF,
+    (port >> 8) & 0xFF, port & 0xFF,
+    (udpLen >> 8) & 0xFF, udpLen & 0xFF,
+    0x00, 0x00
+  ];
+  return { eth, ip, udp, data: dataBytes, msg, ipDst, port, srcPort };
+}
+
+function encapUpdate() {
+  const b = encapBuild();
+  renderEncapLayers(b);
+  renderEncapHexdump(b);
+  renderEncapBinary(b);
+}
+
+function renderEncapLayers(b) {
+  const el = document.getElementById('encap-layers');
+  el.innerHTML = `
+    <div style="border:2px solid var(--c2); border-radius:6px; padding:10px; margin-bottom:4px; cursor:pointer;" data-layer-toggle="1">
+      <div style="color:#88b8ff; font-weight:700; font-size:0.85em;">▾ ETHERNET  <span style="color:var(--text2); font-size:0.82em; font-weight:400;">14 octets | MAC DST: ${MAC_DST} | MAC SRC: ${MAC_SRC} | Type: 0x0800 (IPv4)</span></div>
+      <div class="layer-body" style="margin-top:8px;">
+        <div class="pkt-row">
+          ${makeTooltip('MAC DST',MAC_DST,'pf-eth','Adresse MAC de la machine destinataire (6 octets)')}
+          ${makeTooltip('MAC SRC',MAC_SRC,'pf-eth','Adresse MAC de la machine source (6 octets)')}
+          ${makeTooltip('EtherType','0x0800','pf-eth','Protocole encapsulé : 0x0800 = IPv4')}
+        </div>
+        <div style="border:2px solid var(--c3); border-radius:6px; padding:10px; margin-top:8px;">
+          <div style="color:#9deca8; font-weight:700; font-size:0.85em;">▾ IPv4  <span style="color:var(--text2); font-size:0.82em; font-weight:400;">20 octets | TTL=64 | Proto=17 (UDP) | ${IP_SRC} → ${b.ipDst}</span></div>
+          <div class="pkt-row" style="margin-top:8px;">
+            ${makeTooltip('TTL','64','pf-ip','Time To Live : nombre de sauts max avant suppression du paquet')}
+            ${makeTooltip('Proto','17 (UDP)','pf-ip','Protocole de la couche 4 encapsulée : 17=UDP, 6=TCP')}
+            ${makeTooltip('IP SRC',IP_SRC,'pf-ip','Adresse IP source')}
+            ${makeTooltip('IP DST',b.ipDst,'pf-ip','Adresse IP destination')}
+          </div>
+          <div style="border:2px solid var(--c4); border-radius:6px; padding:10px; margin-top:8px;">
+            <div style="color:#ffe082; font-weight:700; font-size:0.85em;">▾ UDP  <span style="color:var(--text2); font-size:0.82em; font-weight:400;">8 octets | ${b.srcPort} → ${b.port}</span></div>
+            <div class="pkt-row" style="margin-top:8px;">
+              ${makeTooltip('SRC Port',''+b.srcPort,'pf-udp','Port source (éphémère, choisi par le système)')}
+              ${makeTooltip('DST Port',''+b.port,'pf-udp','Port destination (ex: 80=HTTP, 443=HTTPS, 53=DNS)')}
+              ${makeTooltip('Longueur',''+(8+b.data.length)+' oct','pf-udp','Taille totale UDP : header (8) + données')}
+              ${makeTooltip('Checksum','0x0000','pf-udp','Somme de contrôle (facultative en UDP)')}
+            </div>
+            <div style="border:2px solid var(--capp); border-radius:6px; padding:10px; margin-top:8px;">
+              <div style="color:#d0b3ff; font-weight:700; font-size:0.85em;">▾ DONNÉES  <span style="color:var(--text2); font-size:0.82em; font-weight:400;">${b.data.length} octets</span></div>
+              <div class="pkt-row" style="margin-top:8px;">
+                ${makeTooltip('Message','"'+b.msg+'"','pf-data','Message de l\'application : ' + b.data.length + ' octet(s)')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEncapHexdump(b) {
+  const all = [...b.eth, ...b.ip, ...b.udp, ...b.data];
+  const el = document.getElementById('encap-hexdump');
+  const ethEnd = b.eth.length;
+  const ipEnd = ethEnd + b.ip.length;
+  const udpEnd = ipEnd + b.udp.length;
+
+  let html = '';
+  for (let i = 0; i < all.length; i += 16) {
+    const chunk = all.slice(i, i + 16);
+    html += `<span style="color:var(--text2);">${numToHex(i,2)}  </span>`;
+    chunk.forEach((byte, j) => {
+      const abs = i + j;
+      let cls = abs < ethEnd ? 'hex-eth' : abs < ipEnd ? 'hex-ip' : abs < udpEnd ? 'hex-udp' : 'hex-data';
+      html += `<span class="${cls}">${numToHex(byte)} </span>`;
+      if (j === 7) html += ' ';
+    });
+    html += '  ';
+    chunk.forEach((byte, j) => {
+      const abs = i + j;
+      let cls = abs < ethEnd ? 'hex-eth' : abs < ipEnd ? 'hex-ip' : abs < udpEnd ? 'hex-udp' : 'hex-data';
+      const ch = byte >= 32 && byte < 127 ? String.fromCharCode(byte) : '.';
+      html += `<span class="${cls}">${ch}</span>`;
+    });
+    html += '\n';
+  }
+  el.innerHTML = html;
+}
+
+function renderEncapBinary(b) {
+  const el = document.getElementById('encap-binary');
+  const legend = document.getElementById('encap-bin-legend');
+  const all = [...b.eth, ...b.ip, ...b.udp, ...b.data];
+  const ethEnd = b.eth.length;
+  const ipEnd = ethEnd + b.ip.length;
+  const udpEnd = ipEnd + b.udp.length;
+
+  let html = '';
+  all.slice(0, 48).forEach((byte, i) => {
+    let color = i < ethEnd ? '#88b8ff' : i < ipEnd ? '#9deca8' : i < udpEnd ? '#ffe082' : '#d0b3ff';
+    const bits = byte.toString(2).padStart(8,'0');
+    html += `<span style="color:${color}; margin-right:4px;">${bits}</span>`;
+  });
+  if (all.length > 48) html += `<span class="dim"> …+${all.length - 48} octets</span>`;
+  el.innerHTML = html;
+
+  legend.innerHTML = `
+    <span><span style="color:#88b8ff;">■</span> Ethernet (${b.eth.length} oct)</span>
+    <span><span style="color:#9deca8;">■</span> IP (${b.ip.length} oct)</span>
+    <span><span style="color:#ffe082;">■</span> UDP (${b.udp.length} oct)</span>
+    <span><span style="color:#d0b3ff;">■</span> Données (${b.data.length} oct)</span>
+  `;
+}
+
+let encapBusy = false;
+async function encapAnimate() {
+  if (encapBusy) return;
+  encapBusy = true;
+  const b = encapBuild();
+  const panel = document.getElementById('encap-travel-panel');
+  const traveler = document.getElementById('encap-traveler');
+  const log = 'encap-travel-log';
+  panel.style.display = 'block';
+  document.getElementById('encap-travel-log').innerHTML = '';
+
+  traveler.style.transition = 'none';
+  traveler.style.left = '5%';
+  await sleep(100);
+
+  logLine(log, 'log-info', `📦 Trame construite : ${b.eth.length+b.ip.length+b.udp.length+b.data.length} octets`);
+  logLine(log, 'log-send', `🔵 Eth: ${MAC_SRC} → ${MAC_DST} | 0x0800`);
+  logLine(log, 'log-send', `🟢 IP : ${IP_SRC} → ${b.ipDst} | TTL=64 | UDP`);
+  logLine(log, 'log-send', `🟡 UDP: :${b.srcPort} → :${b.port}`);
+  logLine(log, 'log-send', `🟣 Data: "${b.msg}"`);
+
+  traveler.style.transition = 'left 1.2s ease';
+  traveler.style.left = '50%';
+  await sleep(1300);
+  logLine(log, 'log-info', '🔀 Transit par le switch...');
+  traveler.style.left = '95%';
+  await sleep(1300);
+  logLine(log, 'log-recv', '✓ Trame reçue à destination !');
+  traveler.textContent = '✅';
+  await sleep(1500);
+  traveler.textContent = '📦';
+  encapBusy = false;
+}
+
+// ============================================================
+// MODULE: UDP
+// ============================================================
+let udpBusy = false;
+
+function udpBuildPkt() {
+  const msg = document.getElementById('udp-msg').value || 'Bonjour !';
+  const data = Array.from(msg).map(c => c.charCodeAt(0));
+  const udpLen = 8 + data.length;
+  document.getElementById('udp-pkt-detail').innerHTML = `
+    <div class="pkt-row">
+      ${makeTooltip('SRC PORT','54321','pf-udp','Port source (éphémère)')}
+      ${makeTooltip('DST PORT','9999','pf-udp','Port serveur d\'écho')}
+      ${makeTooltip('LEN',''+udpLen+' oct','pf-udp','Longueur UDP = 8 (header) + ' + data.length + ' (données)')}
+      ${makeTooltip('CHECKSUM','0x0000','pf-udp','Checksum facultatif en UDP/IPv4')}
+      ${makeTooltip('DATA','"'+msg+'"','pf-data','Données de l\'application : ' + data.length + ' octet(s)')}
+    </div>
+    <div class="dim" style="font-size:0.78em; margin-top:6px;">
+      Hex : ${data.map(b=>numToHex(b)).join(' ')}
+    </div>
+  `;
+}
+
+async function udpSend() {
+  if (udpBusy) return;
+  udpBusy = true;
+  const msg = document.getElementById('udp-msg').value || 'Bonjour !';
+  const pkt = document.getElementById('udp-pkt');
+  udpBuildPkt();
+  logLine('udp-log', 'log-send', `→ Vous envoyez : "${msg}"`);
+  await animatePacket(pkt, 0, 90, 'var(--c4)');
+  await sleep(200);
+  logLine('udp-log', 'log-info', '  [serveur reçoit et renvoie en écho]');
+  await animatePacket(pkt, 90, 0, 'var(--green)');
+  logLine('udp-log', 'log-recv', `← Écho du serveur : "ECHO: ${msg}"`);
+  udpBusy = false;
+}
+
+async function udpLose() {
+  if (udpBusy) return;
+  udpBusy = true;
+  const msg = document.getElementById('udp-msg').value || 'Bonjour !';
+  const pkt = document.getElementById('udp-pkt');
+  logLine('udp-log', 'log-send', `→ Vous envoyez : "${msg}"`);
+  pkt.style.background = 'var(--c4)';
+  pkt.style.left = '0%';
+  pkt.style.transition = 'none';
+  pkt.classList.add('visible');
+  await sleep(50);
+  pkt.style.transition = 'left 1.2s ease';
+  pkt.style.left = '45%';
+  await sleep(800);
+  pkt.classList.remove('visible');
+  await sleep(300);
+  logLine('udp-log', 'log-err', '✗ Paquet perdu en transit — aucun ACK, aucune retransmission (UDP)');
+  logLine('udp-log', 'log-warn', '  → Avec TCP, l\'émetteur aurait attendu un ACK et retransmis automatiquement.');
+  udpBusy = false;
+}
+
+// ============================================================
+// MODULE: TCP
+// ============================================================
+const TCP_STEPS = [
+  { from:'client', label:'SYN', sub:'seq=100', color:'var(--c2)' },
+  { from:'server', label:'SYN-ACK', sub:'seq=200, ack=101', color:'var(--c3)' },
+  { from:'client', label:'ACK', sub:'ack=201', color:'var(--c2)' },
+  { from:'both', label:'CONNEXION ÉTABLIE', color:'var(--green)' },
+  { from:'client', label:'DATA', sub:'seq=201 "Bonjour"', color:'var(--c2)', data:true },
+  { from:'server', label:'ACK + ECHO', sub:'ack=209 "Reçu: Bonjour"', color:'var(--c3)' },
+  { from:'client', label:'FIN', sub:'seq=209', color:'var(--text2)' },
+  { from:'server', label:'ACK', sub:'ack=210', color:'var(--text2)' },
+  { from:'both', label:'CONNEXION FERMÉE', color:'var(--red)' },
+];
+let tcpIdx = 0;
+let tcpAuto_ = false;
+
+function tcpReset() {
+  tcpIdx = 0; tcpAuto_ = false;
+  document.getElementById('tcp-steps').innerHTML = '';
+  document.getElementById('tcp-step-label').textContent = 'Prêt';
+  document.getElementById('tcp-data-panel').style.display = 'none';
+  renderTcpSteps();
+}
+
+function renderTcpSteps() {
+  const cont = document.getElementById('tcp-steps');
+  cont.innerHTML = '';
+  TCP_STEPS.forEach((s, i) => {
+    if (s.from === 'both') {
+      const sep = document.createElement('div');
+      sep.className = 'seq-sep' + (i < tcpIdx ? ' done' : '');
+      sep.textContent = '══ ' + s.label + ' ══';
+      sep.style.color = s.color;
+      cont.appendChild(sep);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'seq-step' + (i < tcpIdx ? ' done' : i === tcpIdx - 1 ? ' active' : '');
+      const toRight = s.from === 'client';
+      row.innerHTML = `
+        <div class="seq-col" style="color:${toRight ? 'var(--c2)':'var(--border)'}; font-size:0.72em;">│</div>
+        <div class="seq-arrow-area" style="color:${s.color}">
+          ${toRight
+            ? `<div class="seq-arrow-line ${i < tcpIdx ? 'done' : ''}" style="color:${s.color};background:${s.color};"></div>
+               <span class="seq-arrowhead" style="right:-2px;">▶</span>`
+            : `<div class="seq-arrow-line ${i < tcpIdx ? 'done' : ''}" style="color:${s.color};background:${s.color};"></div>
+               <span class="seq-arrowhead-left" style="left:-2px;">◀</span>`
+          }
+          <div class="seq-label" style="color:${s.color};">${s.label}</div>
+          ${s.sub ? `<div class="seq-label-sub">${s.sub}</div>` : ''}
+        </div>
+        <div class="seq-col" style="color:${!toRight ? 'var(--c3)':'var(--border)'}; font-size:0.72em;">│</div>
+      `;
+      cont.appendChild(row);
+    }
+  });
+}
+
+function tcpStep() {
+  if (tcpIdx >= TCP_STEPS.length) { tcpIdx = 0; }
+  tcpIdx++;
+  renderTcpSteps();
+  const step = TCP_STEPS[tcpIdx - 1];
+  document.getElementById('tcp-step-label').textContent = step.label + (step.sub ? ' (' + step.sub + ')' : '');
+  if (tcpIdx === 4) document.getElementById('tcp-data-panel').style.display = 'block';
+}
+
+async function tcpAuto() {
+  if (tcpAuto_) return;
+  tcpAuto_ = true;
+  tcpIdx = 0;
+  renderTcpSteps();
+  for (let i = 0; i < TCP_STEPS.length; i++) {
+    if (!tcpAuto_) break;
+    await sleep(800);
+    tcpIdx++;
+    renderTcpSteps();
+    document.getElementById('tcp-step-label').textContent = TCP_STEPS[i].label;
+    if (tcpIdx === 4) document.getElementById('tcp-data-panel').style.display = 'block';
+  }
+  tcpAuto_ = false;
+}
+
+function tcpSendData() {
+  const msg = document.getElementById('tcp-data-msg').value;
+  logLine('tcp-data-log', 'log-send', `→ CLIENT: ${msg}`);
+  setTimeout(() => logLine('tcp-data-log', 'log-recv', `← SERVEUR: ACK + "Reçu: ${msg}"`), 600);
+}
+
+// ============================================================
+// MODULE: DNS
+// ============================================================
+let dnsZone = {
+  'monprojet.local': '192.168.50.10',
+  'api.local': '192.168.50.11',
+  'db.local': '192.168.50.12',
+};
+let dnsBusy = false;
+
+function renderDnsZone() {
+  const body = document.getElementById('dns-zone-body');
+  body.innerHTML = Object.entries(dnsZone).map(([name, ip]) => `
+    <tr>
+      <td class="mono">${name}</td>
+      <td class="mono">${ip}</td>
+      <td><span class="tag tag-ok">A</span></td>
+      <td><button class="btn btn-danger btn-sm" data-dns-remove="${name}">×</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="4" class="dim" style="text-align:center;padding:12px;">Zone vide</td></tr>';
+}
+
+function dnsAdd() {
+  const name = document.getElementById('dns-new-name').value.trim();
+  const ip = document.getElementById('dns-new-ip').value.trim();
+  if (!name || !ip) return;
+  dnsZone[name] = ip;
+  renderDnsZone();
+  document.getElementById('dns-new-name').value = '';
+  document.getElementById('dns-new-ip').value = '';
+}
+
+function dnsRemove(name) {
+  delete dnsZone[name];
+  renderDnsZone();
+}
+
+async function dnsResolve() {
+  if (dnsBusy) return;
+  dnsBusy = true;
+  const query = document.getElementById('dns-query').value.trim() || 'monprojet.local';
+  const pkt = document.getElementById('dns-pkt');
+  const log = 'dns-log';
+  document.getElementById('dns-log').innerHTML = '';
+
+  logLine(log, 'log-send', `→ QUERY A "${query}" (type=1, class=1)`);
+  await animatePacket(pkt, 0, 90, 'var(--capp)');
+
+  await sleep(300);
+  const ip = dnsZone[query];
+  if (ip) {
+    logLine(log, 'log-recv', `← ANSWER: ${query} → ${ip} (TTL=300)`);
+    await animatePacket(pkt, 90, 0, 'var(--green)');
+    logLine(log, 'log-info', `✓ Résolution réussie en 1 saut (zone locale)`);
+    renderDnsPkt(query, ip);
+  } else {
+    logLine(log, 'log-err', `✗ NXDOMAIN — "${query}" n'existe pas dans la zone`);
+    document.getElementById('dns-pkt-detail').innerHTML = `<span class="log-err">NXDOMAIN : nom de domaine inexistant</span>`;
+  }
+  dnsBusy = false;
+}
+
+function renderDnsPkt(name, ip) {
+  const id = Math.floor(Math.random() * 0xFFFF);
+  const el = document.getElementById('dns-pkt-detail');
+  const encoded = '\\x09' + name.replace('.', '\\x05') + '\\x00';
+  el.innerHTML = `
+    <div class="pkt-row">
+      ${makeTooltip('ID','0x'+numToHex(id,2),'pf-udp','Identifiant de la transaction DNS (2 octets)')}
+      ${makeTooltip('FLAGS','0x0100','pf-ip','0x0100 = requête standard (recursion desired)')}
+      ${makeTooltip('QDCOUNT','0x0001','pf-eth','Nombre de questions : 1')}
+      ${makeTooltip('ANCOUNT','0x0001','pf-data','Nombre de réponses : 1')}
+    </div>
+    <div style="margin-top:8px; font-family:monospace; font-size:0.8em; color:var(--text2);">
+      Question : <span style="color:#d0b3ff;">${encoded}</span> TYPE=A CLASS=IN<br>
+      Réponse  : <span style="color:#9deca8;">${ip}</span> TTL=300
+    </div>
+  `;
+}
+
+// ============================================================
+// MODULE: DHCP
+// ============================================================
+const DHCP_BASE = '192.168.50.';
+const DHCP_START = 100;
+const DHCP_COUNT = 20;
+let dhcpLeases = {};
+let dhcpBusy = false;
+
+function renderDhcpPool() {
+  const pool = document.getElementById('dhcp-pool');
+  pool.innerHTML = '';
+  for (let i = 0; i < DHCP_COUNT; i++) {
+    const ip = DHCP_BASE + (DHCP_START + i);
+    const used = !!dhcpLeases[ip];
+    const slot = document.createElement('div');
+    slot.className = 'ip-slot' + (used ? ' used' : '');
+    slot.id = 'dhcp-slot-' + i;
+    slot.innerHTML = `<span class="ip-slot-dot"></span>${ip}${used ? '<span style="font-size:0.75em;margin-left:4px;">'+dhcpLeases[ip]+'</span>' : ''}`;
+    pool.appendChild(slot);
+  }
+}
+
+async function dhcpNewClient() {
+  if (dhcpBusy) return;
+  dhcpBusy = true;
+  const pkt = document.getElementById('dhcp-pkt');
+  const log = 'dhcp-log';
+
+  const available = [];
+  for (let i = 0; i < DHCP_COUNT; i++) {
+    const ip = DHCP_BASE + (DHCP_START + i);
+    if (!dhcpLeases[ip]) available.push({ ip, idx: i });
+  }
+  if (available.length === 0) {
+    logLine(log, 'log-err', '✗ Pool épuisé — aucune IP disponible !');
+    dhcpBusy = false;
+    return;
+  }
+
+  const mac = randomHex(6);
+  logLine(log, 'log-send', `① DISCOVER (broadcast) depuis ${mac} — "Y a-t-il un serveur DHCP ?"`);
+  await animatePacket(pkt, 0, 90, 'var(--capp)');
+
+  await sleep(300);
+  const { ip, idx } = available[0];
+  logLine(log, 'log-recv', `② OFFER — Serveur propose : ${ip}`);
+  await animatePacket(pkt, 90, 0, 'var(--green)');
+
+  await sleep(200);
+  logLine(log, 'log-send', `③ REQUEST — Client accepte : ${ip}`);
+  await animatePacket(pkt, 0, 90, 'var(--c2)');
+
+  await sleep(300);
+  logLine(log, 'log-recv', `④ ACK — Attribution confirmée : ${ip} → ${mac}`);
+  await animatePacket(pkt, 90, 0, 'var(--green)');
+
+  dhcpLeases[ip] = mac.substr(0,8) + '..';
+  renderDhcpPool();
+  logLine(log, 'log-info', `✓ ${mac} a obtenu l'IP ${ip} (bail 24h)`);
+  dhcpBusy = false;
+}
+
+// ============================================================
+// MODULE: HTTP
+// ============================================================
+const HTTP_ROUTES = {
+  '/status': { code: 200, body: '{"status":"ok","uptime":3600}', ctype:'application/json' },
+  '/users':  { code: 200, body: '[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]', ctype:'application/json' },
+  '/unknown':{ code: 404, body: '{"error":"Not Found"}', ctype:'application/json' },
+  '/echo':   { code: 200, body: '{"echo":"..."} ', ctype:'application/json' },
+};
+
+const HTTP_ANATOMY = {
+  'GET':     'Méthode HTTP : lecture sans corps de requête',
+  'POST':    'Méthode HTTP : envoi de données, crée une ressource',
+  'DELETE':  'Méthode HTTP : supprime une ressource',
+  'PUT':     'Méthode HTTP : remplace complètement une ressource',
+  '/status': 'Chemin de la ressource demandée',
+  '/users':  'Ressource listant les utilisateurs',
+  '/unknown':'Chemin inexistant — provoque un 404',
+  '/echo':   'Renvoie la requête telle quelle',
+  'HTTP/1.1':'Version du protocole — impose l\'en-tête Host:',
+  'Host:':   'Obligatoire depuis HTTP/1.1 (un serveur peut héberger plusieurs domaines)',
+  'Accept:': 'Types de contenus acceptés par le client',
+  'Content-Type:': 'Format du corps de la réponse',
+  'Content-Length:': 'Taille du corps en octets — le client sait où la réponse s\'arrête',
+};
+
+function httpUpdate() {
+  const method = document.getElementById('http-method').value;
+  const route = document.getElementById('http-route').value;
+  const req = `<span class="http-method">${method}</span> <span class="http-path">${route}</span> <span class="http-version">HTTP/1.1</span>\n<span class="http-header-key">Host:</span> localhost:8080\n<span class="http-header-key">Accept:</span> */*\n`;
+  document.getElementById('http-req-raw').innerHTML = req;
+  document.getElementById('http-resp-raw').innerHTML = '<span class="dim">— cliquez Envoyer</span>';
+  renderHttpAnatomy(method, route);
+}
+
+function renderHttpAnatomy(method, route) {
+  const rows = [
+    [method, HTTP_ANATOMY[method] || ''],
+    [route, HTTP_ANATOMY[route] || 'Chemin de la ressource'],
+    ['HTTP/1.1', HTTP_ANATOMY['HTTP/1.1']],
+    ['Host:', HTTP_ANATOMY['Host:']],
+    ['Accept:', HTTP_ANATOMY['Accept:']],
+  ];
+  document.getElementById('http-anatomy-table').innerHTML = `
+    <thead><tr><th>Élément</th><th>Signification</th></tr></thead>
+    <tbody>
+      ${rows.map(([k, v]) => `<tr><td class="mono" style="color:#58a6ff;">${k}</td><td>${v}</td></tr>`).join('')}
+    </tbody>
+  `;
+}
+
+async function httpSend() {
+  const method = document.getElementById('http-method').value;
+  const route = document.getElementById('http-route').value;
+  const info = HTTP_ROUTES[route] || { code: 404, body: '{"error":"Not Found"}', ctype: 'application/json' };
+  const statusColor = info.code === 200 ? 'http-status-ok' : 'http-status-err';
+  const statusText = info.code === 200 ? 'OK' : 'Not Found';
+  const body = route === '/echo' ? `{"echo":"${method} ${route}"}` : info.body;
+  const len = body.length;
+
+  logLine('http-log', 'log-send', `→ ${method} ${route} HTTP/1.1`);
+  await sleep(300);
+  logLine('http-log', 'log-recv', `← HTTP/1.1 ${info.code} ${statusText} (${len} octets)`);
+
+  document.getElementById('http-resp-raw').innerHTML =
+    `<span class="${statusColor}">HTTP/1.1 ${info.code} ${statusText}</span>\n` +
+    `<span class="http-header-key">Content-Type:</span> ${info.ctype}\n` +
+    `<span class="http-header-key">Content-Length:</span> ${len}\n\n` +
+    `<span class="http-body">${body}</span>`;
+}
+
+// ============================================================
+// MODULE: PROXY
+// ============================================================
+let proxyBlacklist = ['pub.trackme.com', 'ads.evil.net'];
+let proxyBusy = false;
+
+function renderProxyBlacklist() {
+  const el = document.getElementById('proxy-blacklist-items');
+  el.innerHTML = proxyBlacklist.map(d => `
+    <span style="background:rgba(248,81,73,0.15);border:1px solid var(--red);border-radius:5px;padding:4px 10px;font-family:monospace;font-size:0.82em;color:var(--red);display:flex;align-items:center;gap:6px;">
+      ${d}
+      <span style="cursor:pointer;font-size:1.1em;" data-proxy-remove="${d}">×</span>
+    </span>
+  `).join('');
+}
+
+function proxyBlacklistAdd() {
+  const d = document.getElementById('proxy-blacklist-new').value.trim();
+  if (!d) return;
+  if (!proxyBlacklist.includes(d)) proxyBlacklist.push(d);
+  renderProxyBlacklist();
+  document.getElementById('proxy-blacklist-new').value = '';
+}
+
+function proxyBlacklistRemove(d) {
+  proxyBlacklist = proxyBlacklist.filter(x => x !== d);
+  renderProxyBlacklist();
+}
+
+async function proxySend() {
+  if (proxyBusy) return;
+  proxyBusy = true;
+  const url = document.getElementById('proxy-url').value.trim();
+  const log = 'proxy-log';
+  document.getElementById('proxy-log').innerHTML = '';
+
+  let host, path;
+  try {
+    const u = new URL(url);
+    host = u.hostname;
+    path = u.pathname || '/';
+  } catch {
+    logLine(log, 'log-err', '✗ URL invalide');
+    proxyBusy = false;
+    return;
+  }
+
+  if (proxyBlacklist.some(b => host.includes(b) || b.includes(host))) {
+    logLine(log, 'log-err', `✗ BLOQUÉ — ${host} est dans la liste noire`);
+    logLine(log, 'log-err', '  → Proxy répond : 403 Forbidden');
+    proxyBusy = false;
+    return;
+  }
+
+  logLine(log, 'log-send', `① Navigateur → Proxy : GET ${url} HTTP/1.1`);
+  const p1 = document.getElementById('proxy-pkt1');
+  await animatePacket(p1, 0, 90, 'var(--capp)');
+
+  await sleep(200);
+  logLine(log, 'log-info', `② Proxy extrait le host : "${host}"`);
+  logLine(log, 'log-info', `   Ouvre une connexion TCP vers ${host}:80`);
+  document.getElementById('proxy-icon').textContent = '🔎';
+
+  await sleep(300);
+  logLine(log, 'log-send', `③ Proxy → Serveur : GET ${path} HTTP/1.1`);
+  const p2 = document.getElementById('proxy-pkt2');
+  await animatePacket(p2, 0, 90, 'var(--green)');
+
+  await sleep(400);
+  logLine(log, 'log-recv', `④ Serveur → Proxy : 200 OK  <html>...</html>`);
+  await animatePacket(p2, 90, 0, 'var(--green)');
+
+  await sleep(200);
+  logLine(log, 'log-recv', `⑤ Proxy → Navigateur : 200 OK  (contenu relayé)`);
+  await animatePacket(p1, 90, 0, 'var(--capp)');
+
+  logLine(log, 'log-info', '✓ Requête relayée avec succès — proxy a vu tout le contenu');
+  proxyBusy = false;
+}
+
+// ============================================================
+// MODULE: HTTPS
+// ============================================================
+let httpsBusy = false;
+
+async function httpsAnimate() {
+  if (httpsBusy) return;
+  httpsBusy = true;
+  const log = 'https-log';
+  const bytesEl = document.getElementById('https-bytes');
+  document.getElementById('https-log').innerHTML = '';
+
+  logLine(log, 'log-info', '── HTTP (proxy lit tout) ──────────────────');
+  logLine(log, 'log-send', '→ GET http://example.com/page HTTP/1.1');
+  await sleep(400);
+  logLine(log, 'log-recv', '← 200 OK | Content-Type: text/html');
+  logLine(log, 'log-recv', '  <html><' + 'body>Contenu visible</' + 'body></html>');
+  logLine(log, 'log-info', '  ✓ Proxy a lu la requête ET la réponse complètes');
+
+  await sleep(600);
+  logLine(log, 'log-info', '── HTTPS CONNECT (proxy aveugle) ──────────');
+  logLine(log, 'log-send', '→ CONNECT example.com:443 HTTP/1.1');
+  await sleep(400);
+  logLine(log, 'log-recv', '← 200 Connection Established');
+  await sleep(300);
+  logLine(log, 'log-err', '  ████ TLS ClientHello ████ (chiffré)');
+
+  let bytes = '';
+  for (let i = 0; i < 120; i++) {
+    bytes += numToHex(Math.floor(Math.random()*256)) + ' ';
+    if (i % 16 === 15) bytes += '\n';
+  }
+  bytesEl.textContent = bytes;
+
+  await sleep(400);
+  logLine(log, 'log-err', '  ████████████ données TLS opaques ████████████');
+  logLine(log, 'log-info', '  ✗ Proxy ne voit que des bytes chiffrés — contenu inaccessible');
+  logLine(log, 'log-warn', '  → Seul l\'interception SSL (man-in-the-middle avec certificat racine) permettrait de voir le contenu');
+  httpsBusy = false;
+}
+
+// ============================================================
+// EVENT LISTENERS (pas d'onclick inline — compatibilité CSP)
+// ============================================================
+function bindAll() {
+  document.querySelectorAll('[data-show]').forEach(el => {
+    el.addEventListener('click', () => show(el.dataset.show));
+  });
+  document.getElementById('sniffer-btn').addEventListener('click', snifferToggle);
+  document.getElementById('btn-sniffer-clear').addEventListener('click', snifferClear);
+  document.getElementById('btn-arp-send').addEventListener('click', arpSend);
+  document.getElementById('btn-arp-reset').addEventListener('click', arpReset);
+  document.getElementById('btn-encap-animate').addEventListener('click', encapAnimate);
+  document.getElementById('encap-msg').addEventListener('input', encapUpdate);
+  document.getElementById('encap-ip-dst').addEventListener('input', encapUpdate);
+  document.getElementById('encap-port').addEventListener('input', encapUpdate);
+  document.getElementById('btn-udp-send').addEventListener('click', udpSend);
+  document.getElementById('btn-udp-lose').addEventListener('click', udpLose);
+  document.getElementById('btn-tcp-step').addEventListener('click', tcpStep);
+  document.getElementById('btn-tcp-auto').addEventListener('click', tcpAuto);
+  document.getElementById('btn-tcp-reset').addEventListener('click', tcpReset);
+  document.getElementById('btn-tcp-data').addEventListener('click', tcpSendData);
+  document.getElementById('btn-dns-resolve').addEventListener('click', dnsResolve);
+  document.getElementById('btn-dns-add').addEventListener('click', dnsAdd);
+  document.getElementById('btn-dhcp-new').addEventListener('click', dhcpNewClient);
+  document.getElementById('http-method').addEventListener('change', httpUpdate);
+  document.getElementById('http-route').addEventListener('change', httpUpdate);
+  document.getElementById('btn-http-send').addEventListener('click', httpSend);
+  document.getElementById('btn-proxy-send').addEventListener('click', proxySend);
+  document.getElementById('btn-proxy-bl-add').addEventListener('click', proxyBlacklistAdd);
+  document.getElementById('btn-https-animate').addEventListener('click', httpsAnimate);
+
+  // Délégation pour contenus générés dynamiquement
+  document.addEventListener('click', function(e) {
+    const layerToggle = e.target.closest('[data-layer-toggle]');
+    if (layerToggle) {
+      const body = layerToggle.querySelector('.layer-body');
+      if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    }
+    const dnsRm = e.target.closest('[data-dns-remove]');
+    if (dnsRm) dnsRemove(dnsRm.dataset.dnsRemove);
+    const proxyRm = e.target.closest('[data-proxy-remove]');
+    if (proxyRm) proxyBlacklistRemove(proxyRm.dataset.proxyRemove);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onerror = function(msg, src, line, col, err) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#f85149;color:#fff;padding:10px 16px;font-family:monospace;font-size:12px;z-index:9999;';
+  d.textContent = 'JS ERROR: ' + msg + ' (ligne ' + line + ')';
+  document.body.appendChild(d);
+};
+const inits = [encapUpdate, udpBuildPkt, httpUpdate, renderArpTable, renderDnsZone, renderDhcpPool, renderProxyBlacklist, renderTcpSteps, bindAll];
+inits.forEach(fn => { try { fn(); } catch(e) { console.error(fn.name, e); } });
+</script>
+</body>
+</html>
